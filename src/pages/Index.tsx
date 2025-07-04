@@ -14,11 +14,11 @@ const Index = () => {
               alt="Arcadis Technologies" 
               className="h-12 w-12 mr-3" 
             />
-            <h1 className="text-4xl font-bold">Arcadis Technologies</h1>
+            <h1 className="text-4xl font-bold">Arcadis Entreprise OS</h1>
           </div>
           <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-            Plateforme de gestion d'entreprise conçue pour la transformation numérique. 
-            Accélérez votre croissance avec nos solutions innovantes au Sénégal.
+            Solution complète de gestion d'entreprise by Arcadis Technologies. 
+            Accélérez votre transformation numérique au Sénégal.
           </p>
           <div className="flex gap-4 justify-center">
             <Button asChild size="lg">

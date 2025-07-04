@@ -89,8 +89,8 @@ export function AppSidebar() {
           />
           {!collapsed && (
             <div>
-              <p className="text-sm font-semibold">Arcadis Technologies</p>
-              <p className="text-xs text-muted-foreground">Business Platform</p>
+              <p className="text-sm font-semibold">Arcadis Entreprise OS</p>
+              <p className="text-xs text-muted-foreground">by Arcadis Technologies</p>
             </div>
           )}
         </div>

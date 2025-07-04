@@ -66,7 +66,7 @@ export default function Register() {
         <CardHeader className="space-y-1">
           <CardTitle className="text-2xl text-center">Créer un compte</CardTitle>
           <CardDescription className="text-center">
-            Rejoignez votre équipe sur Entreprise OS
+            Rejoignez Arcadis Entreprise OS
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">

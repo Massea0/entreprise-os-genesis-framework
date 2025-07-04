@@ -52,7 +52,7 @@ export default function Login() {
         <CardHeader className="space-y-1">
           <CardTitle className="text-2xl text-center">Connexion</CardTitle>
           <CardDescription className="text-center">
-            Accédez à votre espace de travail Entreprise OS
+            Accédez à Arcadis Entreprise OS
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">

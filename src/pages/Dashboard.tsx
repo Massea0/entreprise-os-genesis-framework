@@ -51,7 +51,7 @@ export default function Dashboard() {
           Dashboard
         </h1>
         <p className="text-muted-foreground">
-          Bienvenue dans votre plateforme de gestion Arcadis Technologies
+          Bienvenue dans Arcadis Entreprise OS - votre solution de gestion complète
         </p>
       </div>
 
