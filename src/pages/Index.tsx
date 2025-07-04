@@ -9,14 +9,16 @@ const Index = () => {
       <div className="container mx-auto px-4 py-16">
         <div className="text-center mb-16">
           <div className="flex items-center justify-center mb-6">
-            <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary text-primary-foreground mr-3">
-              <Building2 className="h-6 w-6" />
-            </div>
-            <h1 className="text-4xl font-bold">Entreprise OS</h1>
+            <img 
+              src="/arcadis-logo.svg" 
+              alt="Arcadis Technologies" 
+              className="h-12 w-12 mr-3" 
+            />
+            <h1 className="text-4xl font-bold">Arcadis Technologies</h1>
           </div>
           <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-            Plateforme SaaS complète pour la gestion d'entreprise moderne. 
-            RH, Business et Support centralisés dans un seul outil.
+            Plateforme de gestion d'entreprise conçue pour la transformation numérique. 
+            Accélérez votre croissance avec nos solutions innovantes au Sénégal.
           </p>
           <div className="flex gap-4 justify-center">
             <Button asChild size="lg">

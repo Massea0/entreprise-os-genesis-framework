@@ -82,13 +82,15 @@ export function AppSidebar() {
     <Sidebar collapsible="icon" className="border-r">
       <SidebarHeader className="border-b p-4">
         <div className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-            <Building2 className="h-4 w-4" />
-          </div>
+          <img 
+            src="/arcadis-logo.svg" 
+            alt="Arcadis Technologies" 
+            className="h-8 w-8" 
+          />
           {!collapsed && (
             <div>
-              <p className="text-sm font-semibold">Entreprise OS</p>
-              <p className="text-xs text-muted-foreground">SaaS Platform</p>
+              <p className="text-sm font-semibold">Arcadis Technologies</p>
+              <p className="text-xs text-muted-foreground">Business Platform</p>
             </div>
           )}
         </div>
