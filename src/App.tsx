@@ -11,6 +11,9 @@ import Login from "./pages/auth/Login";
 import Register from "./pages/auth/Register";
 import Dashboard from "./pages/Dashboard";
 import WorkDashboard from "./pages/WorkDashboard";
+import HREmployees from "./pages/hr/Employees";
+import HRDepartments from "./pages/hr/Departments";
+import HROrganization from "./pages/hr/Organization";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -45,13 +48,37 @@ const App = () => (
               </ProtectedRoute>
             } />
             
-            {/* Placeholder routes for future modules */}
+            {/* HR Module Routes */}
+            <Route path="/hr/employees" element={
+              <ProtectedRoute requiredRole="hr_manager">
+                <AppLayout>
+                  <HREmployees />
+                </AppLayout>
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/hr/departments" element={
+              <ProtectedRoute requiredRole="hr_manager">
+                <AppLayout>
+                  <HRDepartments />
+                </AppLayout>
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/hr/organization" element={
+              <ProtectedRoute requiredRole="hr_manager">
+                <AppLayout>
+                  <HROrganization />
+                </AppLayout>
+              </ProtectedRoute>
+            } />
+            
             <Route path="/hr/*" element={
               <ProtectedRoute requiredRole="hr_manager">
                 <AppLayout>
                   <div className="p-8 text-center">
                     <h2 className="text-2xl font-bold mb-4">Module RH</h2>
-                    <p className="text-muted-foreground">Module en cours de développement</p>
+                    <p className="text-muted-foreground">Sélectionnez une section dans le menu</p>
                   </div>
                 </AppLayout>
               </ProtectedRoute>
