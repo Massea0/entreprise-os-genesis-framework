@@ -35,15 +35,61 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         setSession(session);
-        setUser(session?.user ?? null);
+        
+        if (session?.user) {
+          // Fetch user role from custom users table
+          const { data: userData } = await supabase
+            .from('users')
+            .select('role, first_name, last_name, company_id')
+            .eq('id', session.user.id)
+            .single();
+          
+          // Merge role information into user object
+          const userWithRole = {
+            ...session.user,
+            user_metadata: {
+              ...session.user.user_metadata,
+              role: userData?.role,
+              first_name: userData?.first_name,
+              last_name: userData?.last_name,
+              company_id: userData?.company_id
+            }
+          };
+          setUser(userWithRole);
+        } else {
+          setUser(null);
+        }
         setLoading(false);
       }
     );
 
     // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       setSession(session);
-      setUser(session?.user ?? null);
+      
+      if (session?.user) {
+        // Fetch user role from custom users table
+        const { data: userData } = await supabase
+          .from('users')
+          .select('role, first_name, last_name, company_id')
+          .eq('id', session.user.id)
+          .single();
+        
+        // Merge role information into user object
+        const userWithRole = {
+          ...session.user,
+          user_metadata: {
+            ...session.user.user_metadata,
+            role: userData?.role,
+            first_name: userData?.first_name,
+            last_name: userData?.last_name,
+            company_id: userData?.company_id
+          }
+        };
+        setUser(userWithRole);
+      } else {
+        setUser(null);
+      }
       setLoading(false);
     });
 
