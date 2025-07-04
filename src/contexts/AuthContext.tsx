@@ -33,68 +33,63 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   useEffect(() => {
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      (event, session) => {
         setSession(session);
+        setUser(session?.user ?? null);
         
+        // Defer user role fetching to avoid blocking the auth state change
         if (session?.user) {
-          // Fetch user role from custom users table
-          const { data: userData } = await supabase
-            .from('users')
-            .select('role, first_name, last_name, company_id')
-            .eq('id', session.user.id)
-            .single();
-          
-          // Merge role information into user object
-          const userWithRole = {
-            ...session.user,
-            user_metadata: {
-              ...session.user.user_metadata,
-              role: userData?.role,
-              first_name: userData?.first_name,
-              last_name: userData?.last_name,
-              company_id: userData?.company_id
-            }
-          };
-          setUser(userWithRole);
-        } else {
-          setUser(null);
+          setTimeout(() => {
+            fetchUserRole(session.user.id);
+          }, 0);
         }
+        
         setLoading(false);
       }
     );
 
     // Get initial session
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
+      setUser(session?.user ?? null);
       
       if (session?.user) {
-        // Fetch user role from custom users table
-        const { data: userData } = await supabase
-          .from('users')
-          .select('role, first_name, last_name, company_id')
-          .eq('id', session.user.id)
-          .single();
-        
-        // Merge role information into user object
-        const userWithRole = {
-          ...session.user,
-          user_metadata: {
-            ...session.user.user_metadata,
-            role: userData?.role,
-            first_name: userData?.first_name,
-            last_name: userData?.last_name,
-            company_id: userData?.company_id
-          }
-        };
-        setUser(userWithRole);
-      } else {
-        setUser(null);
+        fetchUserRole(session.user.id);
       }
+      
       setLoading(false);
     });
 
     return () => subscription.unsubscribe();
   }, []);
+
+  const fetchUserRole = async (userId: string) => {
+    try {
+      const { data: userData } = await supabase
+        .from('users')
+        .select('role, first_name, last_name, company_id')
+        .eq('id', userId)
+        .single();
+      
+      if (userData) {
+        setUser(prevUser => {
+          if (!prevUser) return null;
+          return {
+            ...prevUser,
+            user_metadata: {
+              ...prevUser.user_metadata,
+              role: userData.role,
+              first_name: userData.first_name,
+              last_name: userData.last_name,
+              company_id: userData.company_id
+            }
+          };
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching user role:', error);
+    }
+  };
 
   const signIn = async (email: string, password: string) => {
     try {
