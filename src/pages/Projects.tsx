@@ -36,6 +36,8 @@ import { WorkOrganizer } from '@/components/ai/WorkOrganizer';
 import { KanbanBoard } from '@/components/projects/KanbanBoard';
 import { ProjectPlanGenerator } from '@/components/projects/ProjectPlanGenerator';
 import { TaskBulkCreator } from '@/components/projects/TaskBulkCreator';
+import { GanttChart } from '@/components/projects/GanttChart';
+import { ProjectTemplates } from '@/components/projects/ProjectTemplates';
 
 interface Project {
   id: string;
@@ -972,7 +974,7 @@ export default function Projects() {
 
       {/* Navigation par onglets */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="overview">
             <FolderOpen className="h-4 w-4 mr-2" />
             Projets
@@ -980,6 +982,14 @@ export default function Projects() {
           <TabsTrigger value="tasks">
             <Target className="h-4 w-4 mr-2" />
             Tâches
+          </TabsTrigger>
+          <TabsTrigger value="gantt">
+            <BarChart3 className="h-4 w-4 mr-2" />
+            Gantt
+          </TabsTrigger>
+          <TabsTrigger value="templates">
+            <CheckCircle2 className="h-4 w-4 mr-2" />
+            Templates
           </TabsTrigger>
           <TabsTrigger value="ai_organization">
             <Users className="h-4 w-4 mr-2" />
@@ -1021,6 +1031,23 @@ export default function Projects() {
               </CardContent>
             </Card>
           )}
+        </TabsContent>
+
+        <TabsContent value="gantt" className="space-y-6">
+          <GanttChart projectId={selectedProject?.id} />
+        </TabsContent>
+
+        <TabsContent value="templates" className="space-y-6">
+          <ProjectTemplates onSelectTemplate={(template) => {
+            // Pre-fill project form with template data
+            setEditingProject(undefined);
+            setShowProjectForm(true);
+            // You can extend this to pre-populate the form
+            toast({
+              title: "Template sélectionné",
+              description: `Template "${template.name}" prêt à être utilisé`
+            });
+          }} />
         </TabsContent>
 
         <TabsContent value="ai_organization" className="space-y-6">
