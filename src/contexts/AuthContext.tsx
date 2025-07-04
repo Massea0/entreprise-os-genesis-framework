@@ -108,16 +108,28 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
       // Check if user is active after successful authentication
       if (data.user) {
-        const { data: userData } = await supabase
-          .from('users')
-          .select('is_active, deleted_at')
-          .eq('id', data.user.id)
-          .single();
+        try {
+          const { data: userData, error: userError } = await supabase
+            .from('users')
+            .select('is_active, deleted_at')
+            .eq('id', data.user.id)
+            .single();
 
-        if (userData && (!userData.is_active || userData.deleted_at)) {
-          await supabase.auth.signOut();
-          const message = userData.deleted_at ? 'Votre compte a été supprimé.' : 'Votre compte a été désactivé.';
-          return { error: { message } };
+          // If user doesn't exist in users table, that's ok - they can still login
+          if (userError && userError.code !== 'PGRST116') {
+            console.error('Error checking user status:', userError);
+            // Don't block login for database errors
+          }
+
+          // Only block login if user explicitly exists and is inactive/deleted
+          if (userData && (!userData.is_active || userData.deleted_at)) {
+            await supabase.auth.signOut();
+            const message = userData.deleted_at ? 'Votre compte a été supprimé.' : 'Votre compte a été désactivé.';
+            return { error: { message } };
+          }
+        } catch (userCheckError) {
+          console.error('Error in user status check:', userCheckError);
+          // Don't block login for user check errors
         }
       }
 
