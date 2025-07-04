@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -36,6 +36,21 @@ interface Project {
   client_company?: { name: string };
 }
 
+interface Task {
+  id: string;
+  title: string;
+  description?: string;
+  status: string;
+  priority: string;
+  project_id: string;
+  assignee_id?: string;
+  due_date?: string;
+  estimated_hours?: number;
+  actual_hours?: number;
+  position?: number;
+  assignee?: { first_name: string; last_name: string };
+}
+
 const PROJECT_STATUSES = [
   { value: 'planning', label: 'Planification', color: 'bg-blue-500' },
   { value: 'active', label: 'En cours', color: 'bg-green-500' },
@@ -46,7 +61,9 @@ const PROJECT_STATUSES = [
 
 export default function ProjectDetail() {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const [project, setProject] = useState<Project | null>(null);
+  const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
@@ -60,18 +77,32 @@ export default function ProjectDetail() {
     try {
       setLoading(true);
       
-      const { data, error } = await supabase
-        .from('projects')
-        .select(`
-          *,
-          owner:owner_id(first_name, last_name),
-          client_company:client_company_id(name)
-        `)
-        .eq('id', id)
-        .single();
+      const [projectResponse, tasksResponse] = await Promise.all([
+        supabase
+          .from('projects')
+          .select(`
+            *,
+            owner:owner_id(first_name, last_name),
+            client_company:client_company_id(name)
+          `)
+          .eq('id', id)
+          .single(),
+        
+        supabase
+          .from('tasks')
+          .select(`
+            *,
+            assignee:assignee_id(first_name, last_name)
+          `)
+          .eq('project_id', id)
+          .order('position')
+      ]);
 
-      if (error) throw error;
-      setProject(data);
+      if (projectResponse.error) throw projectResponse.error;
+      if (tasksResponse.error) throw tasksResponse.error;
+      
+      setProject(projectResponse.data);
+      setTasks(tasksResponse.data || []);
 
     } catch (error) {
       console.error('Error loading project:', error);
@@ -83,6 +114,39 @@ export default function ProjectDetail() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleTaskUpdate = async (taskId: string, updates: Partial<Task>) => {
+    try {
+      const { error } = await supabase
+        .from('tasks')
+        .update(updates)
+        .eq('id', taskId);
+
+      if (error) throw error;
+
+      setTasks(prev => prev.map(task => 
+        task.id === taskId ? { ...task, ...updates } : task
+      ));
+    } catch (error) {
+      console.error('Error updating task:', error);
+      toast({
+        variant: "destructive",
+        title: "Erreur",
+        description: "Erreur lors de la mise à jour de la tâche"
+      });
+    }
+  };
+
+  const handleTaskCreate = () => {
+    toast({
+      title: "Fonctionnalité en développement",
+      description: "La création de tâche sera bientôt disponible"
+    });
+  };
+
+  const handleTaskEdit = (task: Task) => {
+    navigate(`/projects/${id}/tasks/${task.id}`);
   };
 
   if (loading) {
@@ -227,13 +291,12 @@ export default function ProjectDetail() {
           </Button>
         </div>
         
-        <div className="bg-muted/30 rounded-lg p-8 text-center">
-          <Target className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-          <h3 className="text-lg font-medium mb-2">Kanban Board</h3>
-          <p className="text-muted-foreground">
-            La vue Kanban sera bientôt disponible pour organiser vos tâches
-          </p>
-        </div>
+        <KanbanBoard
+          tasks={tasks}
+          onTaskUpdate={handleTaskUpdate}
+          onTaskCreate={handleTaskCreate}
+          onTaskEdit={handleTaskEdit}
+        />
       </div>
     </div>
   );

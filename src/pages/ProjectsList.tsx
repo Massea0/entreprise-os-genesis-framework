@@ -274,89 +274,60 @@ export default function ProjectsList() {
       </div>
 
       {/* Projects List */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="space-y-2">
         {projects.map((project) => {
           const statusConfig = PROJECT_STATUSES.find(s => s.value === project.status);
           
           return (
-            <Card key={project.id} className="hover:shadow-lg transition-shadow group">
-              <CardHeader className="pb-3">
-                <div className="flex items-start justify-between">
-                  <div className="space-y-2">
-                    <CardTitle className="text-lg">{project.name}</CardTitle>
-                    <div className="flex items-center gap-2">
-                      <Badge variant="secondary" className="text-xs">
-                        <div className={`w-2 h-2 rounded-full mr-2 ${statusConfig?.color}`} />
-                        {statusConfig?.label}
+            <Card key={project.id} className="p-4 hover:bg-muted/50 transition-colors">
+              <div className="flex items-center justify-between">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-3 mb-2">
+                    <h3 className="font-medium truncate">{project.name}</h3>
+                    <Badge variant="secondary" className="text-xs shrink-0">
+                      <div className={`w-2 h-2 rounded-full mr-1 ${statusConfig?.color}`} />
+                      {statusConfig?.label}
+                    </Badge>
+                    {project.client_company && (
+                      <Badge variant="outline" className="text-xs shrink-0">
+                        <Building2 className="h-3 w-3 mr-1" />
+                        {project.client_company.name}
                       </Badge>
-                      {project.client_company && (
-                        <Badge variant="outline" className="text-xs">
-                          <Building2 className="h-3 w-3 mr-1" />
-                          {project.client_company.name}
-                        </Badge>
-                      )}
+                    )}
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">Progression</span>
+                      <span className="font-medium">{project.progress}%</span>
+                    </div>
+                    <Progress value={project.progress} className="h-2" />
+                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                      <span>{project.tasks?.filter(t => t.status === 'done').length || 0} / {project.tasksCount || 0} tâches</span>
+                      <div className="flex items-center gap-4">
+                        {project.start_date && (
+                          <div className="flex items-center gap-1">
+                            <Calendar className="h-3 w-3" />
+                            <span>{format(new Date(project.start_date), 'dd/MM/yy', { locale: fr })}</span>
+                          </div>
+                        )}
+                        {project.budget && (
+                          <div className="flex items-center gap-1">
+                            <DollarSign className="h-3 w-3" />
+                            <span>{(project.budget / 1000000).toFixed(1)}M XOF</span>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
-                  <Link to={`/projects/${project.id}`}>
-                    <Button 
-                      variant="ghost" 
-                      size="sm"
-                      className="opacity-0 group-hover:opacity-100 transition-opacity"
-                    >
-                      <ArrowRight className="h-4 w-4" />
-                    </Button>
-                  </Link>
                 </div>
                 
-                {project.description && (
-                  <CardDescription className="text-sm line-clamp-2">
-                    {project.description}
-                  </CardDescription>
-                )}
-              </CardHeader>
-              
-              <CardContent className="space-y-4">
-                {/* Progress Bar */}
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Progression</span>
-                    <span className="font-medium">{project.progress}%</span>
-                  </div>
-                  <Progress value={project.progress} className="h-2" />
-                  <div className="text-xs text-muted-foreground">
-                    {project.tasks?.filter(t => t.status === 'done').length || 0} / {project.tasksCount || 0} tâches terminées
-                  </div>
-                </div>
-
-                {/* Project Info */}
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  {project.start_date && (
-                    <div className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4 text-muted-foreground" />
-                      <span className="truncate">
-                        {format(new Date(project.start_date), 'dd MMM yyyy', { locale: fr })}
-                      </span>
-                    </div>
-                  )}
-                  
-                  {project.budget && (
-                    <div className="flex items-center gap-2">
-                      <DollarSign className="h-4 w-4 text-muted-foreground" />
-                      <span className="truncate">
-                        {project.budget.toLocaleString('fr-FR')} XOF
-                      </span>
-                    </div>
-                  )}
-                </div>
-
-                {/* Action Button */}
-                <Link to={`/projects/${project.id}`} className="block">
-                  <Button variant="outline" className="w-full group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
-                    <Target className="h-4 w-4 mr-2" />
-                    Voir le projet
+                <Link to={`/projects/${project.id}`}>
+                  <Button variant="ghost" size="sm" className="ml-4">
+                    <ArrowRight className="h-4 w-4" />
                   </Button>
                 </Link>
-              </CardContent>
+              </div>
             </Card>
           );
         })}
