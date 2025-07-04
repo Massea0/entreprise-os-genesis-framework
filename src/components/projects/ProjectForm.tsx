@@ -68,15 +68,81 @@ export const ProjectForm = ({
     client_company_id: project?.client_company_id || '',
     owner_id: project?.owner_id || ''
   });
+  
+  const [aiGeneration, setAiGeneration] = useState({
+    enabled: false,
+    loading: false
+  });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onSave({
-      ...formData,
-      budget: formData.budget ? parseFloat(formData.budget) : null,
-      start_date: formData.start_date?.toISOString(),
-      end_date: formData.end_date?.toISOString()
-    });
+    
+    if (aiGeneration.enabled && formData.name && formData.client_company_id && !project) {
+      // Mode IA activé - générer le projet avec l'IA
+      await handleAiProjectGeneration();
+    } else {
+      // Mode normal
+      onSave({
+        ...formData,
+        budget: formData.budget ? parseFloat(formData.budget) : null,
+        start_date: formData.start_date?.toISOString(),
+        end_date: formData.end_date?.toISOString()
+      });
+    }
+  };
+
+  const handleAiProjectGeneration = async () => {
+    try {
+      setAiGeneration(prev => ({ ...prev, loading: true }));
+      
+      // Récupérer les infos client
+      const selectedCompany = companies.find(c => c.id === formData.client_company_id);
+      const clientType = selectedCompany ? 'Entreprise' : 'Standard';
+      
+      // Générer avec l'IA si description courte, sinon utiliser la description fournie
+      const needsAiDescription = !formData.description || formData.description.length < 20;
+      const projectDescription = needsAiDescription 
+        ? `Projet ${formData.name} pour le client ${selectedCompany?.name || 'Non spécifié'}`
+        : formData.description;
+
+      // Appel à l'edge function project-planner-ai
+      const { supabase } = await import('@/integrations/supabase/client');
+      const { data: aiPlan, error: aiError } = await supabase.functions.invoke('project-planner-ai', {
+        body: {
+          name: formData.name,
+          description: projectDescription,
+          budget: formData.budget ? parseFloat(formData.budget) : 2000000,
+          clientType,
+          industry: 'Général'
+        }
+      });
+
+      if (aiError) throw aiError;
+
+      // Créer le projet avec les données IA
+      const projectData = {
+        ...formData,
+        description: aiPlan.data.phases?.map(p => p.description).join(' | ') || projectDescription,
+        budget: aiPlan.data.estimatedBudget || (formData.budget ? parseFloat(formData.budget) : null),
+        start_date: formData.start_date?.toISOString() || new Date().toISOString(),
+        end_date: formData.end_date?.toISOString() || new Date(Date.now() + (aiPlan.data.totalEstimatedDuration || 30) * 24 * 60 * 60 * 1000).toISOString(),
+        aiGenerated: true,
+        aiPlan: aiPlan.data
+      };
+
+      onSave(projectData);
+    } catch (error) {
+      console.error('Erreur génération IA:', error);
+      // Fallback vers création normale en cas d'erreur
+      onSave({
+        ...formData,
+        budget: formData.budget ? parseFloat(formData.budget) : null,
+        start_date: formData.start_date?.toISOString(),
+        end_date: formData.end_date?.toISOString()
+      });
+    } finally {
+      setAiGeneration(prev => ({ ...prev, loading: false }));
+    }
   };
 
   return (
@@ -233,16 +299,68 @@ export const ProjectForm = ({
             ))}
           </SelectContent>
         </Select>
-      </div>
+        </div>
 
-      <div className="flex justify-end gap-2">
-        <Button type="button" variant="outline" onClick={onCancel}>
-          Annuler
-        </Button>
-        <Button type="submit">
-          {project ? 'Modifier' : 'Créer'}
-        </Button>
-      </div>
+        {/* Mode IA */}
+        {!project && (
+          <div className="border rounded-lg p-4 bg-gradient-to-r from-blue-50 to-purple-50">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <h3 className="font-medium text-blue-900">🤖 Génération IA</h3>
+                <p className="text-sm text-blue-700">
+                  Laissez l'IA créer automatiquement le plan complet du projet
+                </p>
+              </div>
+              <label className="flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={aiGeneration.enabled}
+                  onChange={(e) => setAiGeneration(prev => ({ ...prev, enabled: e.target.checked }))}
+                  className="sr-only"
+                />
+                <div className={`relative w-11 h-6 rounded-full transition-colors ${
+                  aiGeneration.enabled ? 'bg-blue-600' : 'bg-gray-300'
+                }`}>
+                  <div className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform ${
+                    aiGeneration.enabled ? 'translate-x-5' : 'translate-x-0'
+                  }`} />
+                </div>
+              </label>
+            </div>
+            
+            {aiGeneration.enabled && (
+              <div className="text-sm text-blue-800 bg-blue-100 p-3 rounded-md">
+                <p className="font-medium mb-1">Mode IA activé !</p>
+                <p>Il suffit de renseigner le <strong>nom du projet</strong> et le <strong>client</strong>. L'IA se chargera de :</p>
+                <ul className="list-disc list-inside mt-2 space-y-1">
+                  <li>Générer une description détaillée</li>
+                  <li>Estimer le budget et les délais</li>
+                  <li>Créer automatiquement les tâches et phases</li>
+                  <li>Assigner les ressources appropriées</li>
+                </ul>
+              </div>
+            )}
+          </div>
+        )}
+
+        <div className="flex justify-end gap-2">
+          <Button type="button" variant="outline" onClick={onCancel}>
+            Annuler
+          </Button>
+          <Button type="submit" disabled={aiGeneration.loading}>
+            {aiGeneration.loading ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+                IA en cours...
+              </>
+            ) : (
+              <>
+                {aiGeneration.enabled && '🤖 '}
+                {project ? 'Modifier' : (aiGeneration.enabled ? 'Créer avec IA' : 'Créer')}
+              </>
+            )}
+          </Button>
+        </div>
     </form>
   );
 };

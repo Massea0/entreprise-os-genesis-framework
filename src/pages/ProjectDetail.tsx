@@ -118,16 +118,35 @@ export default function ProjectDetail() {
 
   const handleTaskUpdate = async (taskId: string, updates: Partial<Task>) => {
     try {
+      // Nettoyer les updates pour ne garder que les champs valides de la DB
+      const validUpdates: any = {};
+      if (updates.status) validUpdates.status = updates.status;
+      if (updates.priority) validUpdates.priority = updates.priority;
+      if (updates.title) validUpdates.title = updates.title;
+      if (updates.description !== undefined) validUpdates.description = updates.description;
+      if (updates.assignee_id !== undefined) validUpdates.assignee_id = updates.assignee_id;
+      if (updates.due_date !== undefined) validUpdates.due_date = updates.due_date;
+      if (updates.estimated_hours !== undefined) validUpdates.estimated_hours = updates.estimated_hours;
+      if (updates.actual_hours !== undefined) validUpdates.actual_hours = updates.actual_hours;
+      if (updates.position !== undefined) validUpdates.position = updates.position;
+      
+      validUpdates.updated_at = new Date().toISOString();
+
       const { error } = await supabase
         .from('tasks')
-        .update(updates)
+        .update(validUpdates)
         .eq('id', taskId);
 
       if (error) throw error;
 
       setTasks(prev => prev.map(task => 
-        task.id === taskId ? { ...task, ...updates } : task
+        task.id === taskId ? { ...task, ...validUpdates } : task
       ));
+
+      toast({
+        title: "Tâche mise à jour",
+        description: "Les modifications ont été enregistrées"
+      });
     } catch (error) {
       console.error('Error updating task:', error);
       toast({

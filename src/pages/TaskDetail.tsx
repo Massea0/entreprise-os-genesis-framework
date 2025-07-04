@@ -329,7 +329,7 @@ export default function TaskDetail() {
           {/* Task Properties */}
           <Card>
             <CardHeader>
-              <CardTitle>Propriétés</CardTitle>
+              <CardTitle>Détails de la tâche</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               {isEditing ? (
@@ -426,17 +426,131 @@ export default function TaskDetail() {
             </CardContent>
           </Card>
 
-          {/* Activity */}
+          {/* Progress & Time Tracking */}
           <Card>
             <CardHeader>
-              <CardTitle>Activité</CardTitle>
+              <CardTitle>Temps et progression</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center gap-3">
+                <Clock className="h-4 w-4 text-muted-foreground" />
+                <div className="flex-1">
+                  <div className="flex justify-between text-sm mb-1">
+                    <span>Temps passé</span>
+                    <span>{task.actual_hours || 0}h / {task.estimated_hours || 0}h</span>
+                  </div>
+                  <div className="w-full bg-secondary rounded-full h-2">
+                    <div 
+                      className="bg-primary h-2 rounded-full transition-all"
+                      style={{ 
+                        width: `${Math.min(100, ((task.actual_hours || 0) / (task.estimated_hours || 1)) * 100)}%` 
+                      }}
+                    />
+                  </div>
+                  {task.estimated_hours && task.actual_hours && task.actual_hours > task.estimated_hours && (
+                    <p className="text-xs text-orange-600 mt-1">
+                      Dépassement de {Math.round(((task.actual_hours - task.estimated_hours) / task.estimated_hours) * 100)}%
+                    </p>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Dependencies & Workflow */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Flux de travail</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <div className="text-sm text-muted-foreground">
-                Créée le {format(new Date(task.created_at), 'dd MMM yyyy à HH:mm', { locale: fr })}
+              <div className="flex items-center justify-between p-3 border rounded-lg">
+                <div className="flex items-center gap-2">
+                  <div className={`w-3 h-3 rounded-full ${
+                    task.status === 'todo' ? 'bg-slate-400' :
+                    task.status === 'in_progress' ? 'bg-blue-500' :
+                    task.status === 'review' ? 'bg-purple-500' :
+                    'bg-green-500'
+                  }`} />
+                  <span className="text-sm font-medium">
+                    {TASK_STATUSES.find(s => s.value === task.status)?.label}
+                  </span>
+                </div>
+                <Badge variant="secondary" className="text-xs">
+                  Étape {TASK_STATUSES.findIndex(s => s.value === task.status) + 1}/4
+                </Badge>
               </div>
-              <div className="text-sm text-muted-foreground">
-                Modifiée le {format(new Date(task.updated_at), 'dd MMM yyyy à HH:mm', { locale: fr })}
+              
+              <div className="grid grid-cols-4 gap-1 mt-4">
+                {TASK_STATUSES.map((status, index) => {
+                  const currentIndex = TASK_STATUSES.findIndex(s => s.value === task.status);
+                  const isCompleted = index <= currentIndex;
+                  const isCurrent = index === currentIndex;
+                  
+                  return (
+                    <div key={status.value} className="flex flex-col items-center">
+                      <div className={`w-8 h-8 rounded-full border-2 flex items-center justify-center ${
+                        isCompleted 
+                          ? isCurrent 
+                            ? 'bg-primary border-primary text-primary-foreground' 
+                            : 'bg-green-500 border-green-500 text-white'
+                          : 'border-muted-foreground/30'
+                      }`}>
+                        {isCompleted && !isCurrent ? (
+                          <CheckCircle2 className="h-4 w-4" />
+                        ) : (
+                          <span className="text-xs">{index + 1}</span>
+                        )}
+                      </div>
+                      <span className="text-xs text-center mt-1 text-muted-foreground">
+                        {status.label}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Activity Log */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Historique des modifications</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="space-y-2">
+                <div className="flex items-start gap-3 p-3 border-l-2 border-green-200 bg-green-50/50">
+                  <CheckCircle2 className="h-4 w-4 text-green-600 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium">Tâche créée</p>
+                    <p className="text-xs text-muted-foreground">
+                      {format(new Date(task.created_at), 'dd MMM yyyy à HH:mm', { locale: fr })}
+                    </p>
+                  </div>
+                </div>
+                
+                {task.updated_at !== task.created_at && (
+                  <div className="flex items-start gap-3 p-3 border-l-2 border-blue-200 bg-blue-50/50">
+                    <Clock className="h-4 w-4 text-blue-600 mt-0.5" />
+                    <div className="flex-1">
+                      <p className="text-sm font-medium">Dernière modification</p>
+                      <p className="text-xs text-muted-foreground">
+                        {format(new Date(task.updated_at), 'dd MMM yyyy à HH:mm', { locale: fr })}
+                      </p>
+                    </div>
+                  </div>
+                )}
+                
+                {task.assignee && (
+                  <div className="flex items-start gap-3 p-3 border-l-2 border-purple-200 bg-purple-50/50">
+                    <User className="h-4 w-4 text-purple-600 mt-0.5" />
+                    <div className="flex-1">
+                      <p className="text-sm font-medium">Assignée à {task.assignee.first_name} {task.assignee.last_name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        Responsable de l'exécution
+                      </p>
+                    </div>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
