@@ -26,9 +26,12 @@ export default function Login() {
     setLoading(true);
     setError('');
 
+    console.log('Attempting to sign in with:', email);
     const { error } = await signIn(email, password);
+    console.log('Sign in result:', error);
 
     if (error) {
+      console.log('Sign in error:', error.message);
       setError(error.message);
       toast({
         variant: "destructive",
@@ -36,6 +39,7 @@ export default function Login() {
         description: error.message
       });
     } else {
+      console.log('Sign in successful, navigating to:', from);
       toast({
         title: "Connexion réussie",
         description: "Bienvenue dans votre espace de travail"
