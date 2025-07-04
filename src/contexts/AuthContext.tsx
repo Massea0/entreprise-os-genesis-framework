@@ -97,11 +97,40 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   }, []);
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-    return { error };
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) {
+        let errorMessage = error.message;
+        if (errorMessage.toLowerCase().includes('invalid login credentials')) {
+          errorMessage = 'Email ou mot de passe incorrect.';
+        }
+        return { error: { ...error, message: errorMessage } };
+      }
+
+      // Check if user is active after successful authentication
+      if (data.user) {
+        const { data: userData } = await supabase
+          .from('users')
+          .select('is_active, deleted_at')
+          .eq('id', data.user.id)
+          .single();
+
+        if (userData && (!userData.is_active || userData.deleted_at)) {
+          await supabase.auth.signOut();
+          const message = userData.deleted_at ? 'Votre compte a été supprimé.' : 'Votre compte a été désactivé.';
+          return { error: { message } };
+        }
+      }
+
+      return { error: null };
+    } catch (err) {
+      console.error('Sign in error:', err);
+      return { error: { message: 'Une erreur inattendue est survenue lors de la connexion.' } };
+    }
   };
 
   const signUp = async (email: string, password: string, firstName: string, lastName: string, role: string = 'client') => {
