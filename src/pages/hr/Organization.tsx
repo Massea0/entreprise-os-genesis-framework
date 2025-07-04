@@ -223,9 +223,9 @@ export default function Organization() {
         .from('employees')
         .select(`
           id, first_name, last_name, manager_id,
-          positions(title),
-          departments(id, name),
-          branches(name)
+          positions!inner(title),
+          departments!inner(id, name),
+          branches!inner(name)
         `)
         .eq('employment_status', 'active');
 

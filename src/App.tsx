@@ -11,6 +11,7 @@ import Login from "./pages/auth/Login";
 import Register from "./pages/auth/Register";
 import Dashboard from "./pages/Dashboard";
 import WorkDashboard from "./pages/WorkDashboard";
+import Projects from "./pages/Projects";
 import HREmployees from "./pages/hr/Employees";
 import HRDepartments from "./pages/hr/Departments";
 import HROrganization from "./pages/hr/Organization";
@@ -44,6 +45,14 @@ const App = () => (
               <ProtectedRoute>
                 <AppLayout>
                   <WorkDashboard />
+                </AppLayout>
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/projects" element={
+              <ProtectedRoute>
+                <AppLayout>
+                  <Projects />
                 </AppLayout>
               </ProtectedRoute>
             } />

@@ -37,6 +37,12 @@ const menuItems = [
     roles: ['admin', 'hr_manager'],
   },
   {
+    title: "Projets",
+    url: "/projects",
+    icon: Building2,
+    roles: ['admin', 'hr_manager', 'client'],
+  },
+  {
     title: "Ressources Humaines",
     icon: Users,
     roles: ['admin', 'hr_manager'],
