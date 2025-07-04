@@ -33,6 +33,9 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { WorkOrganizer } from '@/components/ai/WorkOrganizer';
+import { KanbanBoard } from '@/components/projects/KanbanBoard';
+import { ProjectPlanGenerator } from '@/components/projects/ProjectPlanGenerator';
+import { TaskBulkCreator } from '@/components/projects/TaskBulkCreator';
 
 interface Project {
   id: string;
