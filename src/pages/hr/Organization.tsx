@@ -11,11 +11,6 @@ interface Employee {
   id: string;
   first_name: string;
   last_name: string;
-  employee_number: string;
-  work_email: string;
-  personal_phone: string;
-  employment_status: string;
-  performance_score: number;
   manager_id?: string;
   positions: { title: string };
   departments: { id: string; name: string };
@@ -29,7 +24,11 @@ interface Department {
   code: string;
   status: string;
   employee_count: number;
-  manager?: Employee;
+  manager?: {
+    id: string;
+    first_name: string;
+    last_name: string;
+  };
 }
 
 interface Branch {
@@ -61,11 +60,7 @@ export default function Organization() {
         supabase.from('departments').select(`
           id, name, code, status,
           manager:manager_id(
-            id, first_name, last_name, employee_number, work_email, personal_phone,
-            employment_status, performance_score,
-            positions(title),
-            departments(id, name),
-            branches(name)
+            id, first_name, last_name
           )
         `)
       ]);
@@ -110,8 +105,7 @@ export default function Organization() {
       let employeeQuery = supabase
         .from('employees')
         .select(`
-          id, first_name, last_name, employee_number, work_email, personal_phone,
-          employment_status, performance_score, manager_id,
+          id, first_name, last_name, manager_id,
           positions(title),
           departments(id, name),
           branches(name)
@@ -212,48 +206,33 @@ export default function Organization() {
                     <h4 className="font-semibold">
                       {employee.first_name} {employee.last_name}
                     </h4>
-                    <Badge variant={employee.employment_status === 'active' ? 'default' : 'secondary'}>
+                    <Badge variant="default">
                       <UserCheck className="h-3 w-3 mr-1" />
-                      {employee.employment_status}
+                      Active
                     </Badge>
                   </div>
                   
                   <div className="text-sm text-muted-foreground space-y-1">
-                    <div className="flex items-center gap-4">
-                      <div className="flex items-center gap-1">
-                        <Briefcase className="h-3 w-3" />
-                        <span>{employee.positions?.title}</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Building2 className="h-3 w-3" />
-                        <span>{employee.departments?.name}</span>
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center gap-4">
-                      {employee.work_email && (
-                        <div className="flex items-center gap-1">
-                          <Mail className="h-3 w-3" />
-                          <span>{employee.work_email}</span>
-                        </div>
-                      )}
-                      {employee.personal_phone && (
-                        <div className="flex items-center gap-1">
-                          <Phone className="h-3 w-3" />
-                          <span>{employee.personal_phone}</span>
-                        </div>
-                      )}
-                    </div>
+                     <div className="flex items-center gap-4">
+                       <div className="flex items-center gap-1">
+                         <Briefcase className="h-3 w-3" />
+                         <span>{employee.positions?.title}</span>
+                       </div>
+                       <div className="flex items-center gap-1">
+                         <Building2 className="h-3 w-3" />
+                         <span>{employee.departments?.name}</span>
+                       </div>
+                     </div>
                   </div>
                 </div>
               </div>
               
               <div className="text-right">
-                <div className="text-sm font-medium">
-                  #{employee.employee_number}
-                </div>
+                  <div className="text-sm font-medium">
+                    ID: {employee.id.slice(0, 8)}
+                  </div>
                 <div className="text-sm text-muted-foreground">
-                  Performance: {employee.performance_score || 'N/A'}/10
+                  Équipe: {employee.departments?.name}
                 </div>
                 {hasSubordinates && (
                   <div className="text-xs text-muted-foreground mt-1">
