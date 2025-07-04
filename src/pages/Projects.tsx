@@ -32,6 +32,7 @@ import {
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
+import { WorkOrganizer } from '@/components/ai/WorkOrganizer';
 
 interface Project {
   id: string;
@@ -407,6 +408,346 @@ const ProjectForm = ({
   );
 };
 
+// Composant pour la gestion des tâches
+const TaskManagement = ({ project }: { project: Project }) => {
+  const [tasks, setTasks] = useState<Task[]>(project.tasks || []);
+  const [loading, setLoading] = useState(false);
+  const [showTaskForm, setShowTaskForm] = useState(false);
+  const [editingTask, setEditingTask] = useState<Task | undefined>();
+  const { toast } = useToast();
+
+  const loadTasks = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('tasks')
+        .select(`
+          *,
+          assignee:assignee_id(first_name, last_name)
+        `)
+        .eq('project_id', project.id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setTasks(data || []);
+    } catch (error) {
+      console.error('Error loading tasks:', error);
+      toast({
+        variant: "destructive",
+        title: "Erreur",
+        description: "Erreur lors du chargement des tâches"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadTasks();
+  }, [project.id]);
+
+  const handleSaveTask = async (taskData: any) => {
+    try {
+      if (editingTask) {
+        const { error } = await supabase
+          .from('tasks')
+          .update(taskData)
+          .eq('id', editingTask.id);
+
+        if (error) throw error;
+        toast({ title: "Tâche modifiée", description: "La tâche a été modifiée avec succès" });
+      } else {
+        const { error } = await supabase
+          .from('tasks')
+          .insert([{ ...taskData, project_id: project.id }]);
+
+        if (error) throw error;
+        toast({ title: "Tâche créée", description: "La nouvelle tâche a été créée avec succès" });
+      }
+
+      setShowTaskForm(false);
+      setEditingTask(undefined);
+      loadTasks();
+    } catch (error) {
+      console.error('Error saving task:', error);
+      toast({
+        variant: "destructive",
+        title: "Erreur",
+        description: "Erreur lors de l'enregistrement de la tâche"
+      });
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    const config = TASK_STATUSES.find(s => s.value === status);
+    return config?.color || 'bg-gray-500';
+  };
+
+  const getPriorityColor = (priority: string) => {
+    const config = PRIORITIES.find(p => p.value === priority);
+    return config?.color || 'text-gray-600';
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h2 className="text-2xl font-bold">Tâches - {project.name}</h2>
+          <p className="text-muted-foreground">{tasks.length} tâche(s) au total</p>
+        </div>
+
+        <Dialog open={showTaskForm} onOpenChange={setShowTaskForm}>
+          <DialogTrigger asChild>
+            <Button onClick={() => setEditingTask(undefined)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Nouvelle Tâche
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>
+                {editingTask ? 'Modifier la tâche' : 'Nouvelle tâche'}
+              </DialogTitle>
+            </DialogHeader>
+            <TaskForm
+              task={editingTask}
+              onSave={handleSaveTask}
+              onCancel={() => setShowTaskForm(false)}
+            />
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      {/* Liste des tâches */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {tasks.map((task) => (
+          <Card key={task.id} className="hover:shadow-md transition-shadow">
+            <CardHeader className="pb-3">
+              <div className="flex items-start justify-between">
+                <div className="space-y-1">
+                  <CardTitle className="text-base">{task.title}</CardTitle>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="secondary" className="text-xs">
+                      <div className={`w-2 h-2 rounded-full mr-2 ${getStatusColor(task.status)}`} />
+                      {TASK_STATUSES.find(s => s.value === task.status)?.label}
+                    </Badge>
+                    <Badge variant="outline" className={`text-xs ${getPriorityColor(task.priority)}`}>
+                      {PRIORITIES.find(p => p.value === task.priority)?.label}
+                    </Badge>
+                  </div>
+                </div>
+                <Button variant="ghost" size="sm" onClick={() => {
+                  setEditingTask(task);
+                  setShowTaskForm(true);
+                }}>
+                  <User className="h-4 w-4" />
+                </Button>
+              </div>
+              
+              {task.description && (
+                <CardDescription className="text-sm line-clamp-2">
+                  {task.description}
+                </CardDescription>
+              )}
+            </CardHeader>
+            
+            <CardContent className="space-y-3">
+              {task.assignee && (
+                <div className="flex items-center gap-2 text-sm">
+                  <User className="h-4 w-4 text-muted-foreground" />
+                  <span>{task.assignee.first_name} {task.assignee.last_name}</span>
+                </div>
+              )}
+              
+              {task.due_date && (
+                <div className="flex items-center gap-2 text-sm">
+                  <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+                  <span>{format(new Date(task.due_date), 'dd MMM yyyy', { locale: fr })}</span>
+                </div>
+              )}
+              
+              {task.estimated_hours && (
+                <div className="flex items-center gap-2 text-sm">
+                  <Clock className="h-4 w-4 text-muted-foreground" />
+                  <span>{task.estimated_hours}h estimées</span>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {tasks.length === 0 && (
+        <Card>
+          <CardContent className="text-center py-12">
+            <Target className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+            <h3 className="text-lg font-medium mb-2">Aucune tâche</h3>
+            <p className="text-muted-foreground mb-4">
+              Commencez par créer une tâche pour ce projet
+            </p>
+            <Button onClick={() => setShowTaskForm(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Créer une tâche
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+};
+
+// Composant pour le formulaire de tâche
+const TaskForm = ({ 
+  task, 
+  onSave, 
+  onCancel 
+}: {
+  task?: Task;
+  onSave: (taskData: any) => void;
+  onCancel: () => void;
+}) => {
+  const [formData, setFormData] = useState({
+    title: task?.title || '',
+    description: task?.description || '',
+    status: task?.status || 'todo',
+    priority: task?.priority || 'medium',
+    due_date: task?.due_date ? new Date(task.due_date) : undefined,
+    estimated_hours: task?.estimated_hours?.toString() || '',
+    assignee_id: task?.assignee_id || ''
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSave({
+      ...formData,
+      estimated_hours: formData.estimated_hours ? parseFloat(formData.estimated_hours) : null,
+      due_date: formData.due_date?.toISOString(),
+      assignee_id: formData.assignee_id || null
+    });
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="space-y-2">
+        <Label htmlFor="title">Titre *</Label>
+        <Input
+          id="title"
+          value={formData.title}
+          onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+          required
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="description">Description</Label>
+        <Textarea
+          id="description"
+          value={formData.description}
+          onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+          rows={3}
+        />
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="status">Statut</Label>
+          <Select value={formData.status} onValueChange={(value) => setFormData({ ...formData, status: value })}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {TASK_STATUSES.map((status) => (
+                <SelectItem key={status.value} value={status.value}>
+                  <div className="flex items-center gap-2">
+                    <div className={`w-2 h-2 rounded-full ${status.color}`} />
+                    {status.label}
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="priority">Priorité</Label>
+          <Select value={formData.priority} onValueChange={(value) => setFormData({ ...formData, priority: value })}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {PRIORITIES.map((priority) => (
+                <SelectItem key={priority.value} value={priority.value}>
+                  <span className={priority.color}>{priority.label}</span>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label>Date d'échéance</Label>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                className={cn(
+                  "w-full justify-start text-left font-normal",
+                  !formData.due_date && "text-muted-foreground"
+                )}
+              >
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {formData.due_date ? (
+                  format(formData.due_date, "dd MMM yyyy", { locale: fr })
+                ) : (
+                  <span>Sélectionner une date</span>
+                )}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0">
+              <Calendar
+                mode="single"
+                selected={formData.due_date}
+                onSelect={(date) => setFormData({ ...formData, due_date: date })}
+                initialFocus
+              />
+            </PopoverContent>
+          </Popover>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="estimated_hours">Heures estimées</Label>
+          <Input
+            id="estimated_hours"
+            type="number"
+            value={formData.estimated_hours}
+            onChange={(e) => setFormData({ ...formData, estimated_hours: e.target.value })}
+            placeholder="0"
+          />
+        </div>
+      </div>
+
+      <div className="flex justify-end gap-2">
+        <Button type="button" variant="outline" onClick={onCancel}>
+          Annuler
+        </Button>
+        <Button type="submit">
+          {task ? 'Modifier' : 'Créer'}
+        </Button>
+      </div>
+    </form>
+  );
+};
+
 export default function Projects() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [companies, setCompanies] = useState<Company[]>([]);
@@ -626,23 +967,63 @@ export default function Projects() {
         </Card>
       </div>
 
-      {/* Liste des projets */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {projects.map((project) => (
-          <ProjectCard
-            key={project.id}
-            project={project}
-            onEdit={(project) => {
-              setEditingProject(project);
-              setShowProjectForm(true);
-            }}
-            onViewTasks={(project) => {
-              setSelectedProject(project);
-              setActiveTab('tasks');
-            }}
-          />
-        ))}
-      </div>
+      {/* Navigation par onglets */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="overview">
+            <FolderOpen className="h-4 w-4 mr-2" />
+            Projets
+          </TabsTrigger>
+          <TabsTrigger value="tasks">
+            <Target className="h-4 w-4 mr-2" />
+            Tâches
+          </TabsTrigger>
+          <TabsTrigger value="ai_organization">
+            <Users className="h-4 w-4 mr-2" />
+            IA Organisation
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="overview" className="space-y-6">
+          {/* Liste des projets */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {projects.map((project) => (
+              <ProjectCard
+                key={project.id}
+                project={project}
+                onEdit={(project) => {
+                  setEditingProject(project);
+                  setShowProjectForm(true);
+                }}
+                onViewTasks={(project) => {
+                  setSelectedProject(project);
+                  setActiveTab('tasks');
+                }}
+              />
+            ))}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="tasks" className="space-y-6">
+          {selectedProject ? (
+            <TaskManagement project={selectedProject} />
+          ) : (
+            <Card>
+              <CardContent className="text-center py-12">
+                <Target className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-medium mb-2">Sélectionner un projet</h3>
+                <p className="text-muted-foreground">
+                  Choisissez un projet pour voir ses tâches
+                </p>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+
+        <TabsContent value="ai_organization" className="space-y-6">
+          <WorkOrganizer projectId={selectedProject?.id} />
+        </TabsContent>
+      </Tabs>
 
       {projects.length === 0 && (
         <Card>
