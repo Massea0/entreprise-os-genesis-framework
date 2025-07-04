@@ -31,6 +31,12 @@ const menuItems = [
     roles: ['admin', 'hr_manager', 'client'],
   },
   {
+    title: "IA - Organisation",
+    url: "/work-dashboard",
+    icon: BarChart3,
+    roles: ['admin', 'hr_manager'],
+  },
+  {
     title: "Ressources Humaines",
     icon: Users,
     roles: ['admin', 'hr_manager'],
