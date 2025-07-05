@@ -14,6 +14,10 @@ import WorkDashboard from "./pages/WorkDashboard";
 import ProjectsList from "./pages/ProjectsList";
 import ProjectDetail from "./pages/ProjectDetail";
 import TaskDetail from "./pages/TaskDetail";
+import Quotes from "./pages/business/Quotes";
+import QuoteForm from "./pages/business/QuoteForm";
+import Invoices from "./pages/business/Invoices";
+import Clients from "./pages/business/Clients";
 import HREmployees from "./pages/hr/Employees";
 import HRDepartments from "./pages/hr/Departments";
 import HROrganization from "./pages/hr/Organization";
@@ -107,6 +111,47 @@ const App = () => (
                     <h2 className="text-2xl font-bold mb-4">Module RH</h2>
                     <p className="text-muted-foreground">Sélectionnez une section dans le menu</p>
                   </div>
+                </AppLayout>
+              </ProtectedRoute>
+            } />
+            
+            {/* Business Module Routes */}
+            <Route path="/business/quotes" element={
+              <ProtectedRoute>
+                <AppLayout>
+                  <Quotes />
+                </AppLayout>
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/business/quotes/new" element={
+              <ProtectedRoute>
+                <AppLayout>
+                  <QuoteForm />
+                </AppLayout>
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/business/quotes/:id/edit" element={
+              <ProtectedRoute>
+                <AppLayout>
+                  <QuoteForm />
+                </AppLayout>
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/business/invoices" element={
+              <ProtectedRoute>
+                <AppLayout>
+                  <Invoices />
+                </AppLayout>
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/business/clients" element={
+              <ProtectedRoute>
+                <AppLayout>
+                  <Clients />
                 </AppLayout>
               </ProtectedRoute>
             } />
