@@ -1,16 +1,15 @@
 
 import { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Link } from 'react-router-dom';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Progress } from '@/components/ui/progress';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { ProjectPlannerAI } from '@/components/projects/ProjectPlannerAI';
-import { KanbanBoard } from '@/components/projects/KanbanBoard';
-import { GanttChart } from '@/components/projects/GanttChart';
 import { 
   Plus, 
   Search, 
@@ -20,8 +19,12 @@ import {
   TrendingUp,
   Bot,
   Brain,
-  Sparkles
+  Sparkles,
+  ArrowRight,
+  Building2
 } from 'lucide-react';
+import { format } from 'date-fns';
+import { fr } from 'date-fns/locale';
 
 export default function Projects() {
   const { user } = useAuth();
@@ -33,7 +36,6 @@ export default function Projects() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [showPlanner, setShowPlanner] = useState(false);
-  const [selectedView, setSelectedView] = useState('cards');
 
   useEffect(() => {
     loadData();
@@ -44,13 +46,37 @@ export default function Projects() {
       setLoading(true);
       
       const [projectsData, companiesData, employeesData, tasksData] = await Promise.all([
-        supabase.from('projects').select('*, client_company:companies(name)'),
+        supabase
+          .from('projects')
+          .select(`
+            *,
+            client_company:companies(name),
+            owner:employees!projects_owner_id_fkey(first_name, last_name)
+          `),
         supabase.from('companies').select('*'),
         supabase.from('employees').select('*'),
         supabase.from('tasks').select('*')
       ]);
 
-      if (projectsData.data) setProjects(projectsData.data);
+      if (projectsData.data) {
+        // Calculer la progression pour chaque projet
+        const projectsWithProgress = projectsData.data.map(project => {
+          const projectTasks = tasksData.data?.filter(task => task.project_id === project.id) || [];
+          const completedTasks = projectTasks.filter(task => task.status === 'done').length;
+          const totalTasks = projectTasks.length;
+          const progress = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+          
+          return {
+            ...project,
+            tasks: projectTasks,
+            progress,
+            tasksCount: totalTasks,
+            completedTasks
+          };
+        });
+        setProjects(projectsWithProgress);
+      }
+      
       if (companiesData.data) setCompanies(companiesData.data);
       if (employeesData.data) setEmployees(employeesData.data);
       if (tasksData.data) setTasks(tasksData.data);
@@ -75,41 +101,6 @@ export default function Projects() {
     });
   };
 
-  const handleTaskUpdate = async (task) => {
-    try {
-      const { error } = await supabase
-        .from('tasks')
-        .update({
-          status: task.status,
-          title: task.title,
-          description: task.description,
-          priority: task.priority,
-          due_date: task.due_date,
-          assignee_id: task.assignee_id
-        })
-        .eq('id', task.id);
-
-      if (error) throw error;
-      
-      // Recharger les tâches
-      const { data: updatedTasks } = await supabase.from('tasks').select('*');
-      if (updatedTasks) setTasks(updatedTasks);
-    } catch (error) {
-      console.error('Error updating task:', error);
-      toast({
-        variant: "destructive",
-        title: "Erreur",
-        description: "Erreur lors de la mise à jour de la tâche"
-      });
-    }
-  };
-
-  const handleTaskCreate = async () => {
-    // Cette fonction sera appelée sans paramètres par le KanbanBoard
-    // La logique de création sera gérée directement dans le KanbanBoard
-    await loadData(); // Recharger les données après création
-  };
-
   const filteredProjects = projects.filter(project =>
     project.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     project.description?.toLowerCase().includes(searchTerm.toLowerCase())
@@ -118,7 +109,7 @@ export default function Projects() {
   const getStatusColor = (status) => {
     switch (status) {
       case 'completed': return 'bg-green-500';
-      case 'in_progress': return 'bg-blue-500';
+      case 'active': return 'bg-blue-500';
       case 'on_hold': return 'bg-yellow-500';
       case 'cancelled': return 'bg-red-500';
       default: return 'bg-gray-500';
@@ -128,13 +119,24 @@ export default function Projects() {
   const getStatusLabel = (status) => {
     switch (status) {
       case 'planning': return 'Planification';
-      case 'in_progress': return 'En cours';
+      case 'active': return 'En cours';
       case 'on_hold': return 'En pause';
       case 'completed': return 'Terminé';
       case 'cancelled': return 'Annulé';
       default: return status;
     }
   };
+
+  const getProjectStats = () => {
+    const total = projects.length;
+    const active = projects.filter(p => p.status === 'active').length;
+    const completed = projects.filter(p => p.status === 'completed').length;
+    const totalBudget = projects.reduce((sum, p) => sum + (p.budget || 0), 0);
+
+    return { total, active, completed, totalBudget };
+  };
+
+  const stats = getProjectStats();
 
   if (loading) {
     return (
@@ -198,7 +200,60 @@ export default function Projects() {
         </div>
       )}
 
-      {/* Barre de recherche et filtres */}
+      {/* Statistiques */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center space-x-2">
+              <TrendingUp className="h-8 w-8 text-primary" />
+              <div>
+                <p className="text-2xl font-bold">{stats.total}</p>
+                <p className="text-sm text-muted-foreground">Total projets</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center space-x-2">
+              <Users className="h-8 w-8 text-green-600" />
+              <div>
+                <p className="text-2xl font-bold">{stats.active}</p>
+                <p className="text-sm text-muted-foreground">En cours</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center space-x-2">
+              <Calendar className="h-8 w-8 text-blue-600" />
+              <div>
+                <p className="text-2xl font-bold">{stats.completed}</p>
+                <p className="text-sm text-muted-foreground">Terminés</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center space-x-2">
+              <DollarSign className="h-8 w-8 text-yellow-600" />
+              <div>
+                <p className="text-2xl font-bold">
+                  {(stats.totalBudget / 1000000).toFixed(1)}M
+                </p>
+                <p className="text-sm text-muted-foreground">Budget total (XOF)</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Barre de recherche */}
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
@@ -211,92 +266,98 @@ export default function Projects() {
         </div>
       </div>
 
-      {/* Vues des projets */}
-      <Tabs value={selectedView} onValueChange={setSelectedView}>
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="cards">Cartes</TabsTrigger>
-          <TabsTrigger value="kanban">Kanban</TabsTrigger>
-          <TabsTrigger value="gantt">Gantt</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="cards" className="space-y-4">
-          {filteredProjects.length === 0 ? (
-            <Card>
-              <CardContent className="flex flex-col items-center justify-center py-12">
-                <Bot className="h-12 w-12 text-muted-foreground mb-4" />
-                <h3 className="text-lg font-semibold mb-2">Aucun projet trouvé</h3>
-                <p className="text-muted-foreground text-center mb-4">
-                  Commencez par créer votre premier projet avec l'aide de Synapse IA
-                </p>
-                <Button 
-                  onClick={() => setShowPlanner(true)}
-                  className="bg-gradient-to-r from-purple-600 to-blue-600"
-                >
-                  <Brain className="h-4 w-4 mr-2" />
-                  Créer avec Synapse IA
-                </Button>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredProjects.map((project) => (
-                <Card key={project.id} className="hover:shadow-lg transition-shadow">
-                  <CardHeader className="pb-3">
-                    <div className="flex items-center justify-between">
-                      <CardTitle className="text-lg">{project.name}</CardTitle>
-                      <Badge 
-                        variant="secondary" 
-                        className={`${getStatusColor(project.status)} text-white`}
-                      >
-                        {getStatusLabel(project.status)}
+      {/* Liste des projets */}
+      <div className="space-y-4">
+        {filteredProjects.length === 0 ? (
+          <Card>
+            <CardContent className="flex flex-col items-center justify-center py-12">
+              <Bot className="h-12 w-12 text-muted-foreground mb-4" />
+              <h3 className="text-lg font-semibold mb-2">Aucun projet trouvé</h3>
+              <p className="text-muted-foreground text-center mb-4">
+                Commencez par créer votre premier projet avec l'aide de Synapse IA
+              </p>
+              <Button 
+                onClick={() => setShowPlanner(true)}
+                className="bg-gradient-to-r from-purple-600 to-blue-600"
+              >
+                <Brain className="h-4 w-4 mr-2" />
+                Créer avec Synapse IA
+              </Button>
+            </CardContent>
+          </Card>
+        ) : (
+          filteredProjects.map((project) => (
+            <Card key={project.id} className="p-6 hover:bg-muted/50 transition-colors">
+              <div className="flex items-center justify-between">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-3 mb-3">
+                    <h3 className="text-lg font-semibold truncate">{project.name}</h3>
+                    <Badge variant="secondary" className="text-xs shrink-0">
+                      <div className={`w-2 h-2 rounded-full mr-1 ${getStatusColor(project.status)}`} />
+                      {getStatusLabel(project.status)}
+                    </Badge>
+                    {project.client_company && (
+                      <Badge variant="outline" className="text-xs shrink-0">
+                        <Building2 className="h-3 w-3 mr-1" />
+                        {project.client_company.name}
                       </Badge>
-                    </div>
-                    <p className="text-sm text-muted-foreground">
-                      {project.client_company?.name || 'Client non défini'}
-                    </p>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <p className="text-sm">{project.description}</p>
-                    
-                    <div className="flex items-center justify-between text-sm text-muted-foreground">
-                      <div className="flex items-center gap-1">
-                        <Calendar className="h-4 w-4" />
-                        {project.start_date ? new Date(project.start_date).toLocaleDateString() : 'Non défini'}
-                      </div>
-                      {project.budget && (
-                        <div className="flex items-center gap-1">
-                          <DollarSign className="h-4 w-4" />
-                          {project.budget.toLocaleString()} XOF
-                        </div>
-                      )}
-                    </div>
-
-                    {project.custom_fields?.aiGenerated && (
-                      <div className="flex items-center gap-2 text-xs text-purple-600 bg-purple-50 p-2 rounded">
-                        <Sparkles className="h-3 w-3" />
-                        Généré par Synapse IA
-                      </div>
                     )}
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
-        </TabsContent>
-
-        <TabsContent value="kanban">
-          <KanbanBoard 
-            tasks={tasks}
-            onTaskUpdate={handleTaskUpdate}
-            onTaskCreate={handleTaskCreate}
-            onTaskEdit={handleTaskUpdate}
-          />
-        </TabsContent>
-
-        <TabsContent value="gantt">
-          <GanttChart />
-        </TabsContent>
-      </Tabs>
+                    {project.custom_fields?.aiGenerated && (
+                      <Badge variant="outline" className="text-xs text-purple-600 bg-purple-50 shrink-0">
+                        <Sparkles className="h-3 w-3 mr-1" />
+                        IA
+                      </Badge>
+                    )}
+                  </div>
+                  
+                  {project.description && (
+                    <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
+                      {project.description}
+                    </p>
+                  )}
+                  
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">Progression</span>
+                      <span className="font-medium">{project.progress}%</span>
+                    </div>
+                    <Progress value={project.progress} className="h-2" />
+                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                      <span>{project.completedTasks} / {project.tasksCount} tâches terminées</span>
+                      <div className="flex items-center gap-4">
+                        {project.start_date && (
+                          <div className="flex items-center gap-1">
+                            <Calendar className="h-3 w-3" />
+                            <span>{format(new Date(project.start_date), 'dd/MM/yy', { locale: fr })}</span>
+                          </div>
+                        )}
+                        {project.budget && (
+                          <div className="flex items-center gap-1">
+                            <DollarSign className="h-3 w-3" />
+                            <span>{(project.budget / 1000000).toFixed(1)}M XOF</span>
+                          </div>
+                        )}
+                        {project.owner && (
+                          <div className="flex items-center gap-1">
+                            <Users className="h-3 w-3" />
+                            <span>{project.owner.first_name} {project.owner.last_name}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <Link to={`/projects/${project.id}`}>
+                  <Button variant="ghost" size="sm" className="ml-4">
+                    <ArrowRight className="h-4 w-4" />
+                  </Button>
+                </Link>
+              </div>
+            </Card>
+          ))
+        )}
+      </div>
     </div>
   );
 }

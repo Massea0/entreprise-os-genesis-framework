@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -82,8 +83,8 @@ export default function ProjectDetail() {
           .from('projects')
           .select(`
             *,
-            owner:owner_id(first_name, last_name),
-            client_company:client_company_id(name)
+            owner:employees!projects_owner_id_fkey(first_name, last_name),
+            client_company:companies(name)
           `)
           .eq('id', id)
           .single(),
@@ -92,7 +93,7 @@ export default function ProjectDetail() {
           .from('tasks')
           .select(`
             *,
-            assignee:assignee_id(first_name, last_name)
+            assignee:employees!tasks_assignee_id_fkey(first_name, last_name)
           `)
           .eq('project_id', id)
           .order('position')
@@ -118,7 +119,6 @@ export default function ProjectDetail() {
 
   const handleTaskUpdate = async (taskId: string, updates: Partial<Task>) => {
     try {
-      // Nettoyer les updates pour ne garder que les champs valides de la DB
       const validUpdates: any = {};
       if (updates.status) validUpdates.status = updates.status;
       if (updates.priority) validUpdates.priority = updates.priority;
@@ -165,7 +165,7 @@ export default function ProjectDetail() {
   };
 
   const handleTaskEdit = (task: Task) => {
-    navigate(`/projects/${id}/tasks/${task.id}`);
+    navigate(`/tasks/${task.id}`);
   };
 
   if (loading) {
@@ -304,7 +304,7 @@ export default function ProjectDetail() {
             </p>
           </div>
           
-          <Button>
+          <Button onClick={handleTaskCreate}>
             <Plus className="h-4 w-4 mr-2" />
             Nouvelle tâche
           </Button>
