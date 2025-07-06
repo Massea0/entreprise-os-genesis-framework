@@ -210,6 +210,8 @@ export default function AssigneeSelector({
   const handleAssign = async (employee: Employee | null, reason?: string) => {
     try {
       const userId = employee?.user_id || null;
+      
+      // Appel direct à onAssign qui gère la mise à jour
       await onAssign(userId, reason);
 
       // Marquer la suggestion comme appliquée si c'était une suggestion

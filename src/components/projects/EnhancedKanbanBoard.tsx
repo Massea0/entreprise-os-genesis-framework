@@ -164,81 +164,76 @@ function EnhancedKanbanBoard({
     setDraggedTask(start.draggableId);
   }, []);
 
+  const getStatusLabel = (status: string) => {
+    return COLUMN_CONFIG[status as keyof typeof COLUMN_CONFIG]?.title || status;
+  };
+
   const handleDragEnd = useCallback(async (result: DropResult) => {
+    const { destination, source, draggableId } = result;
+    
     setIsDragging(false);
     setDraggedTask(null);
-    
-    const { destination, source, draggableId } = result;
 
-    if (!destination) return;
-
-    if (
-      destination.droppableId === source.droppableId &&
-      destination.index === source.index
-    ) {
+    if (!destination || 
+        (destination.droppableId === source.droppableId && destination.index === source.index)) {
       return;
     }
 
-    const sourceColumn = columns.find(col => col.id === source.droppableId);
-    const destColumn = columns.find(col => col.id === destination.droppableId);
-    
-    if (!sourceColumn || !destColumn) return;
+    // Animation fluide - optimistic update immédiat
+    const draggedTask = tasks.find(t => t.id === draggableId);
+    if (!draggedTask) return;
 
-    const task = sourceColumn.tasks.find(t => t.id === draggableId);
-    if (!task) return;
-
-    // Animations optimistes - Update UI immédiatement
-    const newColumns = columns.map(col => {
-      if (col.id === source.droppableId) {
-        const newTasks = [...col.tasks];
-        newTasks.splice(source.index, 1);
-        return { ...col, tasks: newTasks };
-      }
-      if (col.id === destination.droppableId) {
-        const newTasks = [...col.tasks];
-        const updatedTask = { ...task, status: destination.droppableId };
-        newTasks.splice(destination.index, 0, updatedTask);
-        return { ...col, tasks: newTasks };
-      }
-      return col;
+    // Mise à jour immédiate de l'UI pour fluidité
+    onTaskUpdate(draggableId, { 
+      status: destination.droppableId,
+      position: destination.index 
     });
 
-    setColumns(newColumns);
-
-    try {
-      // Mettre à jour en base de données
-      await onTaskUpdate(draggableId, {
-        status: destination.droppableId,
-        position: destination.index
-      });
-
-      // Réorganiser les positions dans la colonne de destination
-      const destinationTasks = newColumns.find(col => col.id === destination.droppableId)?.tasks || [];
-      await Promise.all(
-        destinationTasks.map((task, index) => 
-          onTaskUpdate(task.id, { position: index })
-        )
-      );
-
-      // Animation de succès subtile
-      const taskElement = document.querySelector(`[data-rbd-draggable-id="${draggableId}"]`);
-      if (taskElement) {
-        taskElement.classList.add('animate-pulse');
-        setTimeout(() => {
-          taskElement.classList.remove('animate-pulse');
-        }, 300);
+    // Feedback visuel subtil
+    setTimeout(() => {
+      const taskCard = document.querySelector(`[data-rbd-draggable-id="${draggableId}"]`);
+      if (taskCard) {
+        taskCard.classList.add('animate-scale-in');
+        setTimeout(() => taskCard.classList.remove('animate-scale-in'), 300);
       }
+    }, 100);
+
+    // Persistence en arrière-plan avec rollback si erreur
+    try {
+      const { error } = await supabase
+        .from('tasks')
+        .update({ 
+          status: destination.droppableId,
+          position: destination.index,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', draggableId);
+
+      if (error) throw error;
+
+      toast({
+        title: "✅ Tâche déplacée",
+        description: `Nouveau statut: ${getStatusLabel(destination.droppableId)}`,
+        duration: 2000
+      });
 
     } catch (error) {
+      console.error('Drag error:', error);
+      
       // Rollback en cas d'erreur
-      organizeTasksIntoColumns();
+      onTaskUpdate(draggableId, { 
+        status: source.droppableId, 
+        position: source.index 
+      });
+      
       toast({
         variant: "destructive",
-        title: "Erreur",
-        description: "Erreur lors du déplacement de la tâche"
+        title: "❌ Erreur de synchronisation",
+        description: "La tâche a été restaurée à sa position initiale",
+        duration: 3000
       });
     }
-  }, [columns, onTaskUpdate, toast]);
+  }, [tasks, onTaskUpdate, toast]);
 
   const getPriorityInfo = (priority: string) => 
     PRIORITY_CONFIG[priority as keyof typeof PRIORITY_CONFIG] || PRIORITY_CONFIG.medium;
@@ -260,18 +255,18 @@ function EnhancedKanbanBoard({
             {...provided.dragHandleProps}
             className={`mb-3 transform transition-all duration-200 ease-out ${
               snapshot.isDragging 
-                ? 'rotate-2 scale-105 shadow-2xl z-50' 
+                ? 'rotate-1 scale-105 shadow-xl z-50' 
                 : 'hover:scale-[1.02] hover:shadow-md'
-            } ${draggedTask === task.id ? 'opacity-50' : ''}`}
+            } ${draggedTask === task.id ? 'opacity-70' : ''}`}
             style={{
               ...provided.draggableProps.style,
               transformOrigin: 'center',
             }}
           >
             <Card 
-              className={`cursor-pointer border-l-4 transition-all duration-200 ${
+              className={`cursor-pointer border-l-4 transition-all duration-200 group ${
                 snapshot.isDragging 
-                  ? 'border-l-primary bg-white shadow-2xl' 
+                  ? 'border-l-primary bg-white shadow-xl' 
                   : 'border-l-transparent hover:border-l-primary/50 hover:bg-muted/30'
               } ${isOverdue ? 'border-red-200 bg-red-50/50' : ''}`}
               onClick={() => onTaskEdit(task)}
@@ -360,16 +355,6 @@ function EnhancedKanbanBoard({
                           <Plus className="h-3 w-3 text-muted-foreground/50" />
                         </div>
                       )}
-                      
-                      <AssigneeSelector
-                        taskId={task.id}
-                        currentAssigneeId={task.assignee_id}
-                        onAssign={async (userId, reason) => {
-                          await onTaskUpdate(task.id, { assignee_id: userId });
-                        }}
-                        taskSkills={task.custom_fields?.requiredSkills || []}
-                        taskComplexity={task.complexity_score}
-                      />
                     </div>
 
                     <div className="flex items-center gap-2">
@@ -403,7 +388,7 @@ function EnhancedKanbanBoard({
     const IconComponent = config.icon;
 
     return (
-      <div key={column.id} className="flex-1 min-w-[300px]">
+      <div key={column.id} className="flex-1 min-w-[320px]">
         <Card className={`h-full ${config.color} border-2 transition-all duration-200`}>
           <CardHeader className={`pb-3 ${config.headerColor} rounded-t-lg border-b`}>
             <CardTitle className="flex items-center justify-between text-sm font-semibold">
@@ -438,11 +423,11 @@ function EnhancedKanbanBoard({
                 <div
                   ref={provided.innerRef}
                   {...provided.droppableProps}
-                  className={`min-h-[200px] transition-all duration-200 rounded-lg ${
+                  className={`min-h-[200px] transition-all duration-150 rounded-lg ${
                     snapshot.isDraggingOver 
-                      ? 'bg-primary/5 border-2 border-dashed border-primary/30 scale-[1.02]' 
+                      ? 'bg-primary/5 border-2 border-dashed border-primary/30 scale-[1.01]' 
                       : ''
-                  } ${isDragging && !snapshot.isDraggingOver ? 'opacity-60' : ''}`}
+                  } ${isDragging && !snapshot.isDraggingOver ? 'opacity-70' : ''}`}
                 >
                   <div className="space-y-3">
                     {column.tasks.map((task, index) => renderTask(task, index))}
@@ -481,7 +466,7 @@ function EnhancedKanbanBoard({
       
       {/* Overlay de drag global */}
       {isDragging && (
-        <div className="fixed inset-0 bg-black/5 backdrop-blur-[1px] z-40 pointer-events-none transition-all duration-200" />
+        <div className="fixed inset-0 bg-black/3 backdrop-blur-[0.5px] z-40 pointer-events-none transition-all duration-150" />
       )}
     </div>
   );
