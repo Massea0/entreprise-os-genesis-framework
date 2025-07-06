@@ -91,6 +91,11 @@ export const GeminiLiveInterface: React.FC = () => {
               console.log('🤖 Réponse IA:', data.message);
               break;
               
+            case 'warning':
+              console.warn('⚠️ Avertissement Synapse:', data.message);
+              // Les warnings ne sont pas affichés à l'utilisateur pour éviter le spam
+              break;
+              
             case 'error':
               console.error('❌ Erreur Synapse:', data.message);
               toast({

@@ -147,8 +147,10 @@ export const AIContextProvider: React.FC<AIContextProviderProps> = ({ children }
 
     try {
       setIsLoading(true);
-      const userRole = user?.user_metadata?.role || 'client';
-      const userCompanyId = user?.user_metadata?.company_id;
+      
+      // Stabiliser le rôle utilisateur - utiliser la valeur la plus fiable
+      const userRole = user?.user_metadata?.role || user?.app_metadata?.role || 'client';
+      const userCompanyId = user?.user_metadata?.company_id || user?.app_metadata?.company_id;
 
       // Debug: log les valeurs pour identifier le problème
       console.log('AIContextProvider - User role:', userRole);
@@ -182,11 +184,18 @@ export const AIContextProvider: React.FC<AIContextProviderProps> = ({ children }
         
         [projectsData, employeesData, companiesData, tasksData, devisData, invoicesData] = results;
       } else if (userRole === 'client' && !userCompanyId) {
-        // Client sans company_id : données vides pour éviter les erreurs
-        console.warn('Client user without company_id, returning empty data');
-        [projectsData, employeesData, companiesData, tasksData, devisData, invoicesData] = [
-          { data: [] }, { data: [] }, { data: [] }, { data: [] }, { data: [] }, { data: [] }
-        ];
+        // Client sans company_id : utiliser les données générales avec permissions limitées
+        console.warn('Client user without company_id, using limited general data');
+        const results = await Promise.all([
+          supabase.from('projects').select('*').limit(10), // Accès limité
+          Promise.resolve({ data: [] }),
+          supabase.from('companies').select('*').limit(5),
+          Promise.resolve({ data: [] }),
+          Promise.resolve({ data: [] }),
+          Promise.resolve({ data: [] })
+        ]);
+        
+        [projectsData, employeesData, companiesData, tasksData, devisData, invoicesData] = results;
       } else {
         // Employé : données limitées
         const results = await Promise.all([
@@ -217,6 +226,17 @@ export const AIContextProvider: React.FC<AIContextProviderProps> = ({ children }
       const currentModule = getCurrentModule();
       const suggestions = generateContextualSuggestions(currentModule, newContextData);
       setContextualSuggestions(suggestions);
+
+      // Notifier les assistants vocaux du changement de contexte
+      broadcastToVoiceAssistants('context_updated', {
+        userRole,
+        module: currentModule,
+        dataCount: {
+          projects: newContextData.projects.length,
+          tasks: newContextData.tasks.length,
+          employees: newContextData.employees.length
+        }
+      });
 
     } catch (error) {
       console.error('Erreur lors du chargement du contexte IA:', error);
@@ -256,14 +276,17 @@ export const AIContextProvider: React.FC<AIContextProviderProps> = ({ children }
     setContextualSuggestions(suggestions);
   }, [contextData, location.pathname]);
 
-  // Mise à jour temps réel des données toutes les 30 secondes
+  // Mise à jour temps réel des données toutes les 2 minutes (optimisé)
   useEffect(() => {
     if (!user) return;
     
     const interval = setInterval(() => {
-      console.log('🔄 Rafraîchissement automatique des données IA');
-      refreshContext();
-    }, 30000); // 30 secondes
+      // Ne rafraîchir que si l'utilisateur est actif (page visible)
+      if (document.visibilityState === 'visible') {
+        console.log('🔄 Rafraîchissement automatique des données IA');
+        refreshContext();
+      }
+    }, 120000); // 2 minutes
 
     return () => clearInterval(interval);
   }, [user]);

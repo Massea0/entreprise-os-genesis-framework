@@ -230,11 +230,20 @@ serve(async (req) => {
             break;
 
           default:
-            console.log(`❓ Unknown message type: ${data.type}`);
+            // Log du message inconnu pour debugging
+            console.log(`❓ Unknown message type: ${data.type}`, data);
+            
+            // Ne pas envoyer d'erreur pour les messages système internes
+            if (data.type && (data.type.startsWith('_') || data.type === 'keepalive' || data.type === 'system')) {
+              // Ignore les messages système
+              break;
+            }
+            
             socket.send(JSON.stringify({
-              type: 'error',
-              message: 'Type de message non reconnu',
-              timestamp: new Date().toISOString()
+              type: 'warning',
+              message: `Type de message non supporté: ${data.type}`,
+              timestamp: new Date().toISOString(),
+              received_type: data.type
             }));
         }
       } catch (error) {
