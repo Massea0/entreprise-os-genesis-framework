@@ -44,8 +44,8 @@ export const VoiceInterface: React.FC<VoiceInterfaceProps> = ({
   // Initialisation des API vocales
   useEffect(() => {
     if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      recognitionRef.current = new SpeechRecognition();
+      const SpeechRecognitionConstructor = window.SpeechRecognition || window.webkitSpeechRecognition;
+      recognitionRef.current = new SpeechRecognitionConstructor();
       recognitionRef.current.continuous = true;
       recognitionRef.current.interimResults = true;
       recognitionRef.current.lang = language === 'fr' ? 'fr-FR' : 'en-US';
@@ -64,7 +64,10 @@ export const VoiceInterface: React.FC<VoiceInterfaceProps> = ({
     }
 
     // Initialiser AudioContext pour l'analyse audio
-    audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
+    const AudioContextConstructor = window.AudioContext || window.webkitAudioContext;
+    if (AudioContextConstructor) {
+      audioContextRef.current = new AudioContextConstructor();
+    }
 
     return () => {
       stopListening();

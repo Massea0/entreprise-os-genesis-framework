@@ -126,7 +126,7 @@ export const ProjectPlannerAI: React.FC<ProjectPlannerProps> = ({
     if (!generatedPlan) return;
 
     try {
-      // Créer le projet
+      // Créer le projet avec les données JSON sérialisées
       const { data: project, error: projectError } = await supabase
         .from('projects')
         .insert({
@@ -139,9 +139,9 @@ export const ProjectPlannerAI: React.FC<ProjectPlannerProps> = ({
           end_date: new Date(Date.now() + generatedPlan.totalDuration * 24 * 60 * 60 * 1000).toISOString(),
           custom_fields: {
             aiGenerated: true,
-            aiPlan: generatedPlan,
+            aiPlan: JSON.parse(JSON.stringify(generatedPlan)), // Sérialisation explicite
             priority: projectData.priority
-          }
+          } as any
         })
         .select()
         .single();
@@ -164,7 +164,7 @@ export const ProjectPlannerAI: React.FC<ProjectPlannerProps> = ({
             taskIndex,
             requiredSkills: task.requiredSkills,
             aiGenerated: true
-          },
+          } as any,
           position: phaseIndex * 1000 + taskIndex
         }))
       );
