@@ -187,17 +187,25 @@ export default function AssigneeSelector({
 
       // Sauvegarder les suggestions en base pour l'IA
       if (topSuggestions.length > 0) {
-        await supabase
-          .from('task_assignment_suggestions')
-          .upsert(
-            topSuggestions.map(suggestion => ({
-              task_id: taskId,
-              suggested_assignee: suggestion.employee.user_id,
-              confidence_score: suggestion.confidence_score,
-              suggestion_reasons: suggestion.reasons
-            })),
-            { onConflict: 'task_id,suggested_assignee' }
-          );
+        // Utiliser upsert avec ignoreDuplicates pour éviter les conflits
+        try {
+          await supabase
+            .from('task_assignment_suggestions')
+            .upsert(
+              topSuggestions.map(suggestion => ({
+                task_id: taskId,
+                suggested_assignee: suggestion.employee.user_id,
+                confidence_score: suggestion.confidence_score,
+                suggestion_reasons: suggestion.reasons
+              })),
+              { 
+                ignoreDuplicates: true
+              }
+            );
+        } catch (error) {
+          console.log('Error saving suggestions (non-critical):', error);
+          // Ne pas faire échouer le processus si la sauvegarde échoue
+        }
       }
 
     } catch (error) {

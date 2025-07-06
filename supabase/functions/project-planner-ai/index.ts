@@ -37,13 +37,48 @@ serve(async (req) => {
   }
 
   try {
+    console.log('Project planner AI called');
     const supabase = createClient(supabaseUrl!, supabaseKey!);
-    const { name, description, budget, clientType, industry } = await req.json();
+    const body = await req.json();
+    console.log('Request body:', JSON.stringify(body, null, 2));
+    
+    // Supporter plusieurs formats d'entrée
+    const {
+      name,
+      projectName,
+      description,
+      budget,
+      clientType,
+      clientId,
+      industry,
+      priority,
+      availableTeam,
+      companyContext,
+      requirements,
+      timeline
+    } = body;
 
-    if (!name || !description) {
+    const finalName = name || projectName || 'Projet sans nom';
+    const finalDescription = description || 'Description non fournie';
+    
+    console.log('Final params:', { finalName, finalDescription, budget });
+
+    if (!finalName || !finalDescription) {
+      console.error('Missing required fields:', { finalName, finalDescription });
       return new Response(
-        JSON.stringify({ error: 'Nom et description du projet requis' }),
+        JSON.stringify({ 
+          error: 'Nom et description du projet requis',
+          received: { finalName, finalDescription }
+        }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (!geminiApiKey) {
+      console.error('Gemini API key not configured');
+      return new Response(
+        JSON.stringify({ error: 'Gemini API key not configured' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
@@ -63,18 +98,20 @@ serve(async (req) => {
       return 'START';
     };
 
-    const arcadisLevel = detectArcadisLevel(budget || 0, description);
+    const arcadisLevel = detectArcadisLevel(budget || 0, finalDescription);
 
     // Générer le plan avec l'IA Gemini
     const aiPrompt = `
 En tant qu'expert en gestion de projet chez Arcadis Technologies, génère un plan détaillé pour ce projet :
 
-**PROJET:** ${name}
-**DESCRIPTION:** ${description}
+**PROJET:** ${finalName}
+**DESCRIPTION:** ${finalDescription}
 **BUDGET:** ${budget ? `${budget.toLocaleString()} XOF` : 'Non spécifié'}
 **NIVEAU ARCADIS:** ${arcadisLevel}
 **TYPE CLIENT:** ${clientType || 'Standard'}
 **SECTEUR:** ${industry || 'Général'}
+**PRIORITÉ:** ${priority || 'Normale'}
+**ÉQUIPE DISPONIBLE:** ${availableTeam?.length || 0} employés
 
 Génère un plan structuré avec :
 
