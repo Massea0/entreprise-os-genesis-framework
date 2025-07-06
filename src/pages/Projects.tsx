@@ -50,8 +50,7 @@ export default function Projects() {
           .from('projects')
           .select(`
             *,
-            client_company:companies(name),
-            owner:employees!projects_owner_id_fkey(first_name, last_name)
+            client_company:companies(name)
           `),
         supabase.from('companies').select('*'),
         supabase.from('employees').select('*'),
@@ -59,21 +58,38 @@ export default function Projects() {
       ]);
 
       if (projectsData.data) {
-        // Calculer la progression pour chaque projet
-        const projectsWithProgress = projectsData.data.map(project => {
-          const projectTasks = tasksData.data?.filter(task => task.project_id === project.id) || [];
-          const completedTasks = projectTasks.filter(task => task.status === 'done').length;
-          const totalTasks = projectTasks.length;
-          const progress = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
-          
-          return {
-            ...project,
-            tasks: projectTasks,
-            progress,
-            tasksCount: totalTasks,
-            completedTasks
-          };
-        });
+        // Calculer la progression pour chaque projet et charger les owners
+        const projectsWithProgress = await Promise.all(
+          projectsData.data.map(async (project) => {
+            const projectTasks = tasksData.data?.filter(task => task.project_id === project.id) || [];
+            const completedTasks = projectTasks.filter(task => task.status === 'done').length;
+            const totalTasks = projectTasks.length;
+            const progress = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+            
+            // Charger le owner si existe
+            let ownerData = null;
+            if (project.owner_id) {
+              const { data: employeeData } = await supabase
+                .from('employees')
+                .select('first_name, last_name')
+                .eq('user_id', project.owner_id)
+                .single();
+              
+              if (employeeData) {
+                ownerData = employeeData;
+              }
+            }
+            
+            return {
+              ...project,
+              owner: ownerData,
+              tasks: projectTasks,
+              progress,
+              tasksCount: totalTasks,
+              completedTasks
+            };
+          })
+        );
         setProjects(projectsWithProgress);
       }
       

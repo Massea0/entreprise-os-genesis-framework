@@ -93,22 +93,14 @@ export default function ProjectDetail() {
       // Charger séparément l'owner s'il existe
       let ownerData = null;
       if (projectData.owner_id) {
-        const { data: userData } = await supabase
-          .from('users')
-          .select('id')
-          .eq('id', projectData.owner_id)
+        const { data: employeeData } = await supabase
+          .from('employees')
+          .select('first_name, last_name')
+          .eq('user_id', projectData.owner_id)
           .single();
         
-        if (userData) {
-          const { data: employeeData } = await supabase
-            .from('employees')
-            .select('first_name, last_name')
-            .eq('user_id', userData.id)
-            .single();
-          
-          if (employeeData) {
-            ownerData = employeeData;
-          }
+        if (employeeData) {
+          ownerData = employeeData;
         }
       }
 
@@ -126,22 +118,14 @@ export default function ProjectDetail() {
         (tasksData || []).map(async (task) => {
           let assigneeData = null;
           if (task.assignee_id) {
-            const { data: userData } = await supabase
-              .from('users')
-              .select('id')
-              .eq('id', task.assignee_id)
+            const { data: employeeData } = await supabase
+              .from('employees')
+              .select('first_name, last_name')
+              .eq('user_id', task.assignee_id)
               .single();
             
-            if (userData) {
-              const { data: employeeData } = await supabase
-                .from('employees')
-                .select('first_name, last_name')
-                .eq('user_id', userData.id)
-                .single();
-              
-              if (employeeData) {
-                assigneeData = employeeData;
-              }
+            if (employeeData) {
+              assigneeData = employeeData;
             }
           }
           
