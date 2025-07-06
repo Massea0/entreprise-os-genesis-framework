@@ -68,20 +68,44 @@ export const MermaidDiagram: React.FC<MermaidDiagramProps> = ({
   }, [chart]);
 
   const renderDiagram = async () => {
-    if (!elementRef.current) return;
+    if (!elementRef.current || !chart?.trim()) {
+      setError('Élément de rendu ou code Mermaid manquant');
+      setIsLoading(false);
+      return;
+    }
 
     setIsLoading(true);
     setError(null);
 
     try {
+      const container = elementRef.current;
+      
+      // Vérification additionnelle avant manipulation
+      if (!container) {
+        throw new Error('Conteneur de rendu non disponible');
+      }
+
       // Nettoyer le conteneur
-      elementRef.current.innerHTML = '';
+      container.innerHTML = '';
       
       // Générer un ID unique pour le diagramme
       const id = `mermaid-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
       
-      // Valider et rendre le diagramme
+      // Valider le code Mermaid avant rendu
+      try {
+        await mermaid.parse(chart);
+      } catch (parseError) {
+        throw new Error(`Code Mermaid invalide: ${parseError.message}`);
+      }
+      
+      // Rendre le diagramme
       const { svg } = await mermaid.render(id, chart);
+      
+      // Vérification finale avant insertion
+      if (!elementRef.current) {
+        throw new Error('Conteneur supprimé pendant le rendu');
+      }
+      
       elementRef.current.innerHTML = svg;
       
       // Appliquer des styles supplémentaires
@@ -89,10 +113,22 @@ export const MermaidDiagram: React.FC<MermaidDiagramProps> = ({
       if (svgElement) {
         svgElement.style.maxWidth = '100%';
         svgElement.style.height = 'auto';
+        svgElement.style.display = 'block';
+        svgElement.style.margin = '0 auto';
       }
     } catch (err) {
-      setError(`Erreur de rendu du diagramme: ${err instanceof Error ? err.message : 'Erreur inconnue'}`);
       console.error('Mermaid render error:', err);
+      setError(`Erreur de rendu: ${err instanceof Error ? err.message : 'Erreur inconnue'}`);
+      
+      // Fallback: afficher un message d'erreur dans le conteneur
+      if (elementRef.current) {
+        elementRef.current.innerHTML = `
+          <div class="flex flex-col items-center justify-center p-8 text-center border border-red-200 rounded-lg bg-red-50">
+            <div class="text-red-600 mb-2">⚠️ Erreur de rendu</div>
+            <div class="text-sm text-red-500">${err instanceof Error ? err.message : 'Erreur inconnue'}</div>
+          </div>
+        `;
+      }
     } finally {
       setIsLoading(false);
     }
