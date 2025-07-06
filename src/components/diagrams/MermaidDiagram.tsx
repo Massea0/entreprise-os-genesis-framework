@@ -103,7 +103,8 @@ export const MermaidDiagram: React.FC<MermaidDiagramProps> = ({
       
       // Vérification finale avant insertion
       if (!elementRef.current) {
-        throw new Error('Conteneur supprimé pendant le rendu');
+        console.warn('Conteneur supprimé pendant le rendu - arrêt silencieux');
+        return;
       }
       
       elementRef.current.innerHTML = svg;

@@ -186,6 +186,14 @@ function App() {
                   </ProtectedRoute>
                 } />
 
+                <Route path="/support/tickets" element={
+                  <ProtectedRoute>
+                    <AppLayout>
+                      <SupportAdmin />
+                    </AppLayout>
+                  </ProtectedRoute>
+                } />
+
                 {/* Redirect unmatched routes to dashboard */}
                 <Route path="*" element={<Navigate to="/dashboard" replace />} />
               </Routes>
