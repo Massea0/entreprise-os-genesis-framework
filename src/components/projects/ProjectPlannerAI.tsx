@@ -132,6 +132,14 @@ export const ProjectPlannerAI: React.FC<ProjectPlannerProps> = ({
         priority: projectData.priority
       }));
 
+      // Calcul sécurisé de la date de fin
+      const totalDuration = generatedPlan.totalDuration && !isNaN(generatedPlan.totalDuration) 
+        ? generatedPlan.totalDuration 
+        : 30; // valeur par défaut de 30 jours
+      
+      const startDate = new Date();
+      const endDate = new Date(startDate.getTime() + totalDuration * 24 * 60 * 60 * 1000);
+
       const { data: project, error: projectError } = await supabase
         .from('projects')
         .insert({
@@ -139,9 +147,9 @@ export const ProjectPlannerAI: React.FC<ProjectPlannerProps> = ({
           description: projectData.description,
           client_company_id: projectData.clientId,
           status: 'planning',
-          budget: generatedPlan.estimatedBudget,
-          start_date: new Date().toISOString(),
-          end_date: new Date(Date.now() + generatedPlan.totalDuration * 24 * 60 * 60 * 1000).toISOString(),
+          budget: generatedPlan.estimatedBudget || 0,
+          start_date: startDate.toISOString(),
+          end_date: endDate.toISOString(),
           custom_fields: customFields
         })
         .select()
