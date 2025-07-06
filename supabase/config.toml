@@ -91,3 +91,15 @@ verify_jwt = false
 
 [functions.ai-support-assistant]
 verify_jwt = true
+
+[functions.synapse-live-voice]
+verify_jwt = false
+
+[functions.gemini-live-voice] 
+verify_jwt = false
+
+[functions.voice-ai-assistant]
+verify_jwt = false
+
+[functions.smart-task-assignment]
+verify_jwt = true

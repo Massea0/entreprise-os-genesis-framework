@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -17,6 +16,7 @@ interface AIContextData {
   isLoading: boolean;
   refreshContext: () => Promise<void>;
   addInsight: (insight: any) => void;
+  broadcastToVoiceAssistants: (message: string, data?: any) => void;
 }
 
 interface ContextualSuggestion {
@@ -233,6 +233,17 @@ export const AIContextProvider: React.FC<AIContextProviderProps> = ({ children }
     }));
   };
 
+  // Fonction pour envoyer des données aux assistants vocaux connectés
+  const broadcastToVoiceAssistants = (message: string, data?: any) => {
+    // Cette fonction peut être utilisée par les assistants vocaux pour recevoir des updates
+    console.log('🔊 Broadcasting to voice assistants:', message);
+    
+    // Émettre un événement personnalisé que les assistants vocaux peuvent écouter
+    window.dispatchEvent(new CustomEvent('ai-context-update', {
+      detail: { message, data, timestamp: new Date().toISOString() }
+    }));
+  };
+
   // Rafraîchir le contexte quand l'utilisateur ou la route change
   useEffect(() => {
     refreshContext();
@@ -263,7 +274,8 @@ export const AIContextProvider: React.FC<AIContextProviderProps> = ({ children }
     contextualSuggestions,
     isLoading,
     refreshContext,
-    addInsight
+    addInsight,
+    broadcastToVoiceAssistants
   };
 
   return (
