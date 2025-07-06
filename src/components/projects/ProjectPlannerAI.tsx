@@ -100,14 +100,73 @@ export const ProjectPlannerAI: React.FC<ProjectPlannerProps> = ({
 
       if (error) throw error;
 
-      if (aiPlan?.success) {
-        setGeneratedPlan(aiPlan.data);
+      if (aiPlan?.success && aiPlan?.data) {
+        // Mapper les données de l'API vers le format attendu par le frontend
+        const mappedPlan = {
+          // Mapper totalEstimatedDuration -> totalDuration avec validation
+          totalDuration: typeof aiPlan.data.totalEstimatedDuration === 'number' && 
+                        !isNaN(aiPlan.data.totalEstimatedDuration) && 
+                        aiPlan.data.totalEstimatedDuration > 0 
+                        ? aiPlan.data.totalEstimatedDuration 
+                        : 30, // fallback 30 jours
+          
+          // Mapper estimatedBudget avec validation
+          estimatedBudget: typeof aiPlan.data.estimatedBudget === 'number' && 
+                          !isNaN(aiPlan.data.estimatedBudget) && 
+                          aiPlan.data.estimatedBudget >= 0
+                          ? aiPlan.data.estimatedBudget 
+                          : 1000000, // fallback 1M XOF
+          
+          // Mapper les phases avec validation
+          phases: Array.isArray(aiPlan.data.phases) ? aiPlan.data.phases.map(phase => ({
+            name: phase.name || 'Phase sans nom',
+            description: phase.description || 'Description non disponible',
+            // Mapper estimatedDuration -> duration avec validation  
+            duration: typeof phase.estimatedDuration === 'number' && 
+                     !isNaN(phase.estimatedDuration) && 
+                     phase.estimatedDuration > 0
+                     ? phase.estimatedDuration 
+                     : 7, // fallback 7 jours
+            
+            // Mapper les tâches avec validation
+            tasks: Array.isArray(phase.tasks) ? phase.tasks.map(task => ({
+              title: task.title || 'Tâche sans nom',
+              description: task.description || 'Description non disponible',
+              estimatedHours: typeof task.estimatedHours === 'number' && 
+                             !isNaN(task.estimatedHours) && 
+                             task.estimatedHours > 0
+                             ? task.estimatedHours 
+                             : 8, // fallback 8h
+              requiredSkills: Array.isArray(task.requiredSkills) ? task.requiredSkills : [],
+              priority: ['low', 'medium', 'high', 'urgent'].includes(task.priority) 
+                       ? task.priority 
+                       : 'medium',
+              assignedEmployee: task.assignedEmployee || null
+            })) : []
+          })) : [],
+          
+          // Mapper les autres champs avec validation
+          recommendedTeam: Array.isArray(aiPlan.data.recommendedTeam) 
+                          ? aiPlan.data.recommendedTeam 
+                          : [],
+          riskAssessment: Array.isArray(aiPlan.data.recommendations) 
+                         ? aiPlan.data.recommendations 
+                         : Array.isArray(aiPlan.data.riskAssessment) 
+                         ? aiPlan.data.riskAssessment 
+                         : [],
+          timeline: aiPlan.data.timeline || 'Timeline non disponible'
+        };
+
+        console.log('Plan mappé:', mappedPlan);
+        setGeneratedPlan(mappedPlan);
         setCurrentStep(2);
         
         toast({
           title: "🤖 Plan généré avec succès",
           description: "Synapse a analysé votre projet et créé un plan détaillé automatiquement"
         });
+      } else {
+        throw new Error('Format de réponse invalide de l\'API');
       }
     } catch (error) {
       console.error('Erreur génération IA:', error);
@@ -125,20 +184,44 @@ export const ProjectPlannerAI: React.FC<ProjectPlannerProps> = ({
     if (!generatedPlan) return;
 
     try {
+      console.log('Création projet avec plan:', generatedPlan);
+      
+      // Validation finale des données avant création
+      const validatedPlan = {
+        ...generatedPlan,
+        totalDuration: typeof generatedPlan.totalDuration === 'number' && 
+                      !isNaN(generatedPlan.totalDuration) && 
+                      generatedPlan.totalDuration > 0
+                      ? generatedPlan.totalDuration 
+                      : 30,
+        estimatedBudget: typeof generatedPlan.estimatedBudget === 'number' && 
+                        !isNaN(generatedPlan.estimatedBudget) && 
+                        generatedPlan.estimatedBudget >= 0
+                        ? generatedPlan.estimatedBudget 
+                        : 1000000
+      };
+
       // Créer le projet avec les données dans custom_fields - conversion JSON explicite
       const customFields = JSON.parse(JSON.stringify({
         aiGenerated: true,
-        aiPlan: generatedPlan,
+        aiPlan: validatedPlan,
         priority: projectData.priority
       }));
 
-      // Calcul sécurisé de la date de fin
-      const totalDuration = generatedPlan.totalDuration && !isNaN(generatedPlan.totalDuration) 
-        ? generatedPlan.totalDuration 
-        : 30; // valeur par défaut de 30 jours
-      
+      // Calcul sécurisé des dates
       const startDate = new Date();
-      const endDate = new Date(startDate.getTime() + totalDuration * 24 * 60 * 60 * 1000);
+      const durationDays = validatedPlan.totalDuration;
+      const endDate = new Date(startDate.getTime() + (durationDays * 24 * 60 * 60 * 1000));
+      
+      // Validation des dates avant toISOString()
+      if (!startDate || isNaN(startDate.getTime())) {
+        throw new Error('Date de début invalide');
+      }
+      if (!endDate || isNaN(endDate.getTime())) {
+        throw new Error('Date de fin invalide');
+      }
+
+      console.log('Dates calculées:', { startDate, endDate, durationDays });
 
       const { data: project, error: projectError } = await supabase
         .from('projects')
@@ -147,7 +230,7 @@ export const ProjectPlannerAI: React.FC<ProjectPlannerProps> = ({
           description: projectData.description,
           client_company_id: projectData.clientId,
           status: 'planning',
-          budget: generatedPlan.estimatedBudget || 0,
+          budget: validatedPlan.estimatedBudget,
           start_date: startDate.toISOString(),
           end_date: endDate.toISOString(),
           custom_fields: customFields
@@ -157,32 +240,42 @@ export const ProjectPlannerAI: React.FC<ProjectPlannerProps> = ({
 
       if (projectError) throw projectError;
 
-      // Créer les tâches automatiquement
-      const tasksToCreate = (generatedPlan.phases || []).flatMap((phase, phaseIndex) =>
+      // Créer les tâches automatiquement avec validation
+      const tasksToCreate = (validatedPlan.phases || []).flatMap((phase, phaseIndex) =>
         (phase.tasks || []).map((task, taskIndex) => ({
-          title: task.title,
-          description: task.description,
+          title: task.title || 'Tâche sans nom',
+          description: task.description || 'Description non disponible',
           project_id: project.id,
-          estimated_hours: task.estimatedHours,
-          priority: task.priority,
+          estimated_hours: typeof task.estimatedHours === 'number' && 
+                          !isNaN(task.estimatedHours) && 
+                          task.estimatedHours > 0
+                          ? task.estimatedHours 
+                          : 8,
+          priority: ['low', 'medium', 'high', 'urgent'].includes(task.priority) 
+                   ? task.priority 
+                   : 'medium',
           status: 'todo',
           assignee_id: task.assignedEmployee || null,
           custom_fields: JSON.parse(JSON.stringify({
-            phase: phase.name,
+            phase: phase.name || 'Phase sans nom',
             phaseIndex,
             taskIndex,
-            requiredSkills: task.requiredSkills || [],
+            requiredSkills: Array.isArray(task.requiredSkills) ? task.requiredSkills : [],
             aiGenerated: true
           })),
           position: phaseIndex * 1000 + taskIndex
         }))
       );
 
-      const { error: tasksError } = await supabase
-        .from('tasks')
-        .insert(tasksToCreate);
+      console.log('Tâches à créer:', tasksToCreate.length);
 
-      if (tasksError) throw tasksError;
+      if (tasksToCreate.length > 0) {
+        const { error: tasksError } = await supabase
+          .from('tasks')
+          .insert(tasksToCreate);
+
+        if (tasksError) throw tasksError;
+      }
 
       toast({
         title: "🎉 Projet créé avec succès !",
@@ -201,7 +294,7 @@ export const ProjectPlannerAI: React.FC<ProjectPlannerProps> = ({
       toast({
         variant: "destructive",
         title: "Erreur",
-        description: "Impossible de créer le projet"
+        description: `Impossible de créer le projet: ${error.message}`
       });
     }
   };
