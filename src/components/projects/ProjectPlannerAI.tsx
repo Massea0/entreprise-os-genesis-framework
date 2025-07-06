@@ -150,8 +150,8 @@ export const ProjectPlannerAI: React.FC<ProjectPlannerProps> = ({
       if (projectError) throw projectError;
 
       // Créer les tâches automatiquement
-      const tasksToCreate = generatedPlan.phases.flatMap((phase, phaseIndex) =>
-        phase.tasks.map((task, taskIndex) => ({
+      const tasksToCreate = (generatedPlan.phases || []).flatMap((phase, phaseIndex) =>
+        (phase.tasks || []).map((task, taskIndex) => ({
           title: task.title,
           description: task.description,
           project_id: project.id,
@@ -163,7 +163,7 @@ export const ProjectPlannerAI: React.FC<ProjectPlannerProps> = ({
             phase: phase.name,
             phaseIndex,
             taskIndex,
-            requiredSkills: task.requiredSkills,
+            requiredSkills: task.requiredSkills || [],
             aiGenerated: true
           })),
           position: phaseIndex * 1000 + taskIndex
@@ -256,7 +256,7 @@ export const ProjectPlannerAI: React.FC<ProjectPlannerProps> = ({
                     <SelectValue placeholder="Sélectionner un client" />
                   </SelectTrigger>
                   <SelectContent>
-                    {companies.map((company) => (
+                    {(companies || []).map((company) => (
                       <SelectItem key={company.id} value={company.id}>
                         {company.name}
                       </SelectItem>
@@ -359,19 +359,19 @@ export const ProjectPlannerAI: React.FC<ProjectPlannerProps> = ({
                 </div>
                 <div className="text-center p-4 bg-purple-50 rounded-lg">
                   <Users className="h-6 w-6 mx-auto mb-2 text-purple-600" />
-                  <div className="font-semibold">{generatedPlan.recommendedTeam.length}</div>
+                  <div className="font-semibold">{(generatedPlan.recommendedTeam || []).length}</div>
                   <div className="text-sm text-muted-foreground">Personnes recommandées</div>
                 </div>
                 <div className="text-center p-4 bg-yellow-50 rounded-lg">
                   <Target className="h-6 w-6 mx-auto mb-2 text-yellow-600" />
-                  <div className="font-semibold">{generatedPlan.phases.length}</div>
+                  <div className="font-semibold">{(generatedPlan.phases || []).length}</div>
                   <div className="text-sm text-muted-foreground">Phases</div>
                 </div>
               </div>
 
               {/* Phases détaillées */}
               <div className="space-y-4">
-                {generatedPlan.phases.map((phase, index) => (
+                {(generatedPlan.phases || []).map((phase, index) => (
                   <Card key={index} className="border-l-4 border-l-primary">
                     <CardContent className="p-4">
                       <div className="flex items-center justify-between mb-3">
@@ -381,13 +381,13 @@ export const ProjectPlannerAI: React.FC<ProjectPlannerProps> = ({
                       <p className="text-sm text-muted-foreground mb-3">{phase.description}</p>
                       
                       <div className="space-y-2">
-                        {phase.tasks.map((task, taskIndex) => (
+                        {(phase.tasks || []).map((task, taskIndex) => (
                           <div key={taskIndex} className="flex items-center gap-3 p-2 bg-muted/50 rounded">
                             <CheckCircle className="h-4 w-4 text-green-600" />
                             <div className="flex-1">
                               <div className="font-medium text-sm">{task.title}</div>
                               <div className="text-xs text-muted-foreground">
-                                {task.estimatedHours}h • {task.requiredSkills.join(', ')}
+                                {task.estimatedHours}h • {(task.requiredSkills || []).join(', ')}
                               </div>
                             </div>
                             <Badge variant={
@@ -406,7 +406,7 @@ export const ProjectPlannerAI: React.FC<ProjectPlannerProps> = ({
               </div>
 
               {/* Risques identifiés */}
-              {generatedPlan.riskAssessment.length > 0 && (
+              {(generatedPlan.riskAssessment || []).length > 0 && (
                 <Card className="mt-6 border-orange-200">
                   <CardContent className="p-4">
                     <h4 className="font-semibold mb-3 flex items-center gap-2">
@@ -414,7 +414,7 @@ export const ProjectPlannerAI: React.FC<ProjectPlannerProps> = ({
                       Risques identifiés par Synapse
                     </h4>
                     <ul className="space-y-1">
-                      {generatedPlan.riskAssessment.map((risk, index) => (
+                      {(generatedPlan.riskAssessment || []).map((risk, index) => (
                         <li key={index} className="text-sm flex items-start gap-2">
                           <span className="text-orange-600 font-bold mt-1">•</span>
                           <span>{risk}</span>
