@@ -5,7 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Building2, Users, Crown, UserCheck, ChevronDown, ChevronRight, Briefcase, User, MapPin, Eye } from 'lucide-react';
+import { Building2, Users, Crown, UserCheck, ChevronDown, ChevronRight, Briefcase, User, MapPin, Network, TreePine } from 'lucide-react';
+import { ConventionalOrgChart } from '@/components/hr/ConventionalOrgChart';
 
 interface Employee {
   id: string;
@@ -157,7 +158,7 @@ export default function Organization() {
   const [selectedBranch, setSelectedBranch] = useState<string>('all');
   const [selectedDepartment, setSelectedDepartment] = useState<string>('all');
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
-  const [viewMode, setViewMode] = useState<'tree' | 'grid'>('tree');
+  const [viewMode, setViewMode] = useState<'hierarchy' | 'tree'>('hierarchy');
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
 
@@ -318,6 +319,79 @@ export default function Organization() {
     );
   };
 
+  // Fonction pour afficher les employés en mode grille
+  const renderEmployeeGrid = (employee: Employee) => {
+    const hasSubordinates = employee.subordinates && employee.subordinates.length > 0;
+    const totalSubordinates = countTotalSubordinates(employee);
+
+    return (
+      <Card key={employee.id} className="p-4">
+        <div className="flex items-start gap-3">
+          {/* Avatar/Icône */}
+          <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${
+            hasSubordinates ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
+          }`}>
+            {hasSubordinates ? (
+              <Users className="h-5 w-5" />
+            ) : (
+              <User className="h-5 w-5" />
+            )}
+          </div>
+
+          {/* Informations employé */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-2">
+              <h3 className="font-semibold truncate">
+                {employee.first_name} {employee.last_name}
+              </h3>
+              {hasSubordinates && (
+                <Crown className="h-4 w-4 text-yellow-500" />
+              )}
+            </div>
+            
+            <Badge variant="secondary" className="mb-2">
+              {employee.positions?.title}
+            </Badge>
+            
+            <div className="space-y-1 text-sm text-muted-foreground">
+              <div className="flex items-center gap-1">
+                <Building2 className="h-3 w-3" />
+                <span className="truncate">{employee.departments?.name}</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <MapPin className="h-3 w-3" />
+                <span className="truncate">{employee.branches?.name}</span>
+              </div>
+              {hasSubordinates && (
+                <div className="flex items-center gap-1">
+                  <Users className="h-3 w-3" />
+                  <span>
+                    {employee.subordinates!.length} direct{employee.subordinates!.length > 1 ? 's' : ''}
+                    {totalSubordinates > employee.subordinates!.length && 
+                      ` • ${totalSubordinates} total`
+                    }
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </Card>
+    );
+  };
+
+  // Fonction pour collecter tous les employés en mode flat pour la grille
+  const getAllEmployeesFlat = (employees: Employee[]): Employee[] => {
+    let result: Employee[] = [];
+    employees.forEach(emp => {
+      result.push(emp);
+      if (emp.subordinates && emp.subordinates.length > 0) {
+        result = result.concat(getAllEmployeesFlat(emp.subordinates));
+      }
+    });
+    return result;
+  };
+
   const expandAll = () => {
     const allIds = new Set<string>();
     const collectIds = (employees: Employee[]) => {
@@ -357,18 +431,20 @@ export default function Organization() {
         
         <div className="flex items-center gap-2">
           <Button
+            variant={viewMode === 'hierarchy' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setViewMode('hierarchy')}
+          >
+            <Network className="h-4 w-4 mr-1" />
+            Hiérarchique
+          </Button>
+          <Button
             variant={viewMode === 'tree' ? 'default' : 'outline'}
             size="sm"
             onClick={() => setViewMode('tree')}
           >
+            <TreePine className="h-4 w-4 mr-1" />
             Arbre
-          </Button>
-          <Button
-            variant={viewMode === 'grid' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setViewMode('grid')}
-          >
-            Grille
           </Button>
         </div>
       </div>
@@ -498,15 +574,17 @@ export default function Organization() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Eye className="h-5 w-5" />
-            Structure Hiérarchique
+            <Network className="h-5 w-5" />
+            Structure Organisationnelle
           </CardTitle>
           <CardDescription>
-            Cliquez sur les icônes pour développer/réduire les branches de l'arbre
+            Vue hiérarchique avec liens matérialisés ou format arbre textuel
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {organizationData.length > 0 ? (
+          {viewMode === 'hierarchy' ? (
+            <ConventionalOrgChart />
+          ) : organizationData.length > 0 ? (
             <div className="space-y-1 font-mono text-sm">
               {organizationData.map(employee => renderEmployeeTree(employee))}
             </div>

@@ -58,11 +58,11 @@ const KANBAN_COLUMNS = [
     textColor: 'text-blue-700'
   },
   { 
-    id: 'review', 
-    title: 'En révision', 
-    color: 'bg-purple-100 border-purple-200',
+    id: 'blocked', 
+    title: 'Bloqué', 
+    color: 'bg-red-100 border-red-200',
     icon: AlertCircle,
-    textColor: 'text-purple-700'
+    textColor: 'text-red-700'
   },
   { 
     id: 'done', 

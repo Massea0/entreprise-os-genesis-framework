@@ -2,6 +2,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Users, FileText, MessageSquare, TrendingUp } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { MetricCard } from '@/components/ui/MetricCard';
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -12,32 +13,44 @@ export default function Dashboard() {
       title: "Employés Actifs",
       value: "8",
       description: "Personnel en service",
+      trend: "+2.5%",
+      trendDirection: "up" as const,
       icon: Users,
       color: "text-blue-600",
+      bgColor: "bg-blue-50 dark:bg-blue-950",
       roles: ['admin', 'hr_manager']
     },
     {
       title: "Factures en Attente",
       value: "12",
       description: "À traiter ce mois",
+      trend: "-8.1%",
+      trendDirection: "down" as const,
       icon: FileText,
       color: "text-green-600",
+      bgColor: "bg-green-50 dark:bg-green-950",
       roles: ['admin', 'client']
     },
     {
       title: "Tickets Ouverts",
       value: "3",
       description: "Support en cours",
+      trend: "0%",
+      trendDirection: "stable" as const,
       icon: MessageSquare,
       color: "text-orange-600",
+      bgColor: "bg-orange-50 dark:bg-orange-950",
       roles: ['admin', 'hr_manager', 'client']
     },
     {
       title: "Performance",
       value: "94%",
       description: "Score global équipe",
+      trend: "+5%",
+      trendDirection: "up" as const,
       icon: TrendingUp,
       color: "text-purple-600",
+      bgColor: "bg-purple-50 dark:bg-purple-950",
       roles: ['admin', 'hr_manager']
     }
   ];
@@ -57,20 +70,17 @@ export default function Dashboard() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {filteredStats.map((stat) => (
-          <Card key={stat.title}>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
-                {stat.title}
-              </CardTitle>
-              <stat.icon className={`h-4 w-4 ${stat.color}`} />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stat.value}</div>
-              <p className="text-xs text-muted-foreground">
-                {stat.description}
-              </p>
-            </CardContent>
-          </Card>
+          <MetricCard
+            key={stat.title}
+            title={stat.title}
+            value={stat.value}
+            description={stat.description}
+            trend={stat.trend}
+            trendDirection={stat.trendDirection}
+            icon={stat.icon}
+            color={stat.color}
+            bgColor={stat.bgColor}
+          />
         ))}
       </div>
 
