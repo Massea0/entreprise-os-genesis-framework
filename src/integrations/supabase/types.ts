@@ -54,6 +54,53 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_support_responses: {
+        Row: {
+          confidence_score: number
+          content: string
+          created_at: string
+          generated_by: string
+          id: string
+          is_sent: boolean
+          metadata: Json | null
+          response_type: string
+          sent_at: string | null
+          ticket_id: string
+        }
+        Insert: {
+          confidence_score?: number
+          content: string
+          created_at?: string
+          generated_by?: string
+          id?: string
+          is_sent?: boolean
+          metadata?: Json | null
+          response_type: string
+          sent_at?: string | null
+          ticket_id: string
+        }
+        Update: {
+          confidence_score?: number
+          content?: string
+          created_at?: string
+          generated_by?: string
+          id?: string
+          is_sent?: boolean
+          metadata?: Json | null
+          response_type?: string
+          sent_at?: string | null
+          ticket_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_support_responses_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ai_tasks_log: {
         Row: {
           completed_at: string | null
@@ -1399,6 +1446,115 @@ export type Database = {
           },
         ]
       }
+      support_agents: {
+        Row: {
+          availability_status: string
+          average_response_time: unknown | null
+          created_at: string
+          current_active_tickets: number
+          employee_id: string | null
+          id: string
+          is_ai_assisted: boolean
+          max_concurrent_tickets: number
+          satisfaction_rating: number | null
+          specializations: string[] | null
+          total_tickets_handled: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          availability_status?: string
+          average_response_time?: unknown | null
+          created_at?: string
+          current_active_tickets?: number
+          employee_id?: string | null
+          id?: string
+          is_ai_assisted?: boolean
+          max_concurrent_tickets?: number
+          satisfaction_rating?: number | null
+          specializations?: string[] | null
+          total_tickets_handled?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          availability_status?: string
+          average_response_time?: unknown | null
+          created_at?: string
+          current_active_tickets?: number
+          employee_id?: string | null
+          id?: string
+          is_ai_assisted?: boolean
+          max_concurrent_tickets?: number
+          satisfaction_rating?: number | null
+          specializations?: string[] | null
+          total_tickets_handled?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_agents_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      support_notifications: {
+        Row: {
+          created_at: string
+          data: Json | null
+          id: string
+          is_read: boolean
+          message: string
+          notification_type: string
+          read_at: string | null
+          recipient_id: string | null
+          recipient_role: string
+          severity: string
+          ticket_id: string
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          data?: Json | null
+          id?: string
+          is_read?: boolean
+          message: string
+          notification_type: string
+          read_at?: string | null
+          recipient_id?: string | null
+          recipient_role: string
+          severity?: string
+          ticket_id: string
+          title: string
+        }
+        Update: {
+          created_at?: string
+          data?: Json | null
+          id?: string
+          is_read?: boolean
+          message?: string
+          notification_type?: string
+          read_at?: string | null
+          recipient_id?: string | null
+          recipient_role?: string
+          severity?: string
+          ticket_id?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_notifications_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       task_assignment_suggestions: {
         Row: {
           confidence_score: number | null
@@ -1752,48 +1908,123 @@ export type Database = {
           },
         ]
       }
+      ticket_sentiment_analysis: {
+        Row: {
+          analyzed_at: string
+          confidence_score: number
+          created_at: string
+          emotions: Json | null
+          id: string
+          message_id: string
+          sentiment_label: string
+          sentiment_score: number
+          ticket_id: string
+          urgency_level: number
+        }
+        Insert: {
+          analyzed_at?: string
+          confidence_score?: number
+          created_at?: string
+          emotions?: Json | null
+          id?: string
+          message_id: string
+          sentiment_label: string
+          sentiment_score: number
+          ticket_id: string
+          urgency_level: number
+        }
+        Update: {
+          analyzed_at?: string
+          confidence_score?: number
+          created_at?: string
+          emotions?: Json | null
+          id?: string
+          message_id?: string
+          sentiment_label?: string
+          sentiment_score?: number
+          ticket_id?: string
+          urgency_level?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ticket_sentiment_analysis_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "ticket_messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ticket_sentiment_analysis_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tickets: {
         Row: {
+          ai_confidence_score: number | null
           assigned_to: string | null
+          auto_categorized: boolean | null
           category_id: string | null
           company_id: string
           created_at: string | null
           description: string
+          escalation_reason: string | null
+          estimated_resolution_time: unknown | null
           id: string
           is_proactive: boolean | null
+          last_sentiment_analysis: string | null
           number: string
           priority: string
           proactive_analysis: Json | null
+          resolution_suggestions: Json | null
+          sentiment_trend: Json | null
           status: string
           subject: string
           updated_at: string | null
         }
         Insert: {
+          ai_confidence_score?: number | null
           assigned_to?: string | null
+          auto_categorized?: boolean | null
           category_id?: string | null
           company_id: string
           created_at?: string | null
           description: string
+          escalation_reason?: string | null
+          estimated_resolution_time?: unknown | null
           id?: string
           is_proactive?: boolean | null
+          last_sentiment_analysis?: string | null
           number: string
           priority: string
           proactive_analysis?: Json | null
+          resolution_suggestions?: Json | null
+          sentiment_trend?: Json | null
           status: string
           subject: string
           updated_at?: string | null
         }
         Update: {
+          ai_confidence_score?: number | null
           assigned_to?: string | null
+          auto_categorized?: boolean | null
           category_id?: string | null
           company_id?: string
           created_at?: string | null
           description?: string
+          escalation_reason?: string | null
+          estimated_resolution_time?: unknown | null
           id?: string
           is_proactive?: boolean | null
+          last_sentiment_analysis?: string | null
           number?: string
           priority?: string
           proactive_analysis?: Json | null
+          resolution_suggestions?: Json | null
+          sentiment_trend?: Json | null
           status?: string
           subject?: string
           updated_at?: string | null
@@ -1867,6 +2098,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      calculate_urgency_from_sentiment: {
+        Args: {
+          p_sentiment_score: number
+          p_sentiment_label: string
+          p_ticket_priority?: string
+        }
+        Returns: number
+      }
       cleanup_old_activity_logs: {
         Args: Record<PropertyKey, never>
         Returns: undefined

@@ -88,3 +88,6 @@ verify_jwt = false
 
 [functions.ai-business-analyzer]
 verify_jwt = false
+
+[functions.ai-support-assistant]
+verify_jwt = true
