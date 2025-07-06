@@ -32,7 +32,7 @@ export const EnhancedGlobalVoiceAssistant: React.FC<EnhancedGlobalVoiceAssistant
   const { toast } = useToast();
   const { user } = useAuth();
   const [isExpanded, setIsExpanded] = useState(false);
-  const [activeMode, setActiveMode] = useState<'gemini' | 'synapse' | 'both'>('both');
+  const [activeTab, setActiveTab] = useState<'voice' | 'insights'>('voice');
   
   const { 
     contextualSuggestions, 
@@ -126,151 +126,128 @@ export const EnhancedGlobalVoiceAssistant: React.FC<EnhancedGlobalVoiceAssistant
 
       {/* Interface contextuelle expandée */}
       {isExpanded && (
-        <Card className="fixed bottom-24 right-6 w-96 z-40 shadow-2xl border-primary/20 bg-white/95 backdrop-blur-sm max-h-[80vh] overflow-y-auto">
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
+        <Card className="fixed bottom-24 right-6 w-96 z-40 shadow-2xl border-primary/20 bg-white/95 backdrop-blur-sm max-h-[80vh] overflow-hidden">
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <Brain className="h-5 w-5 text-primary" />
-                <CardTitle className="text-lg">Synapse IA Avancé</CardTitle>
+                <CardTitle className="text-lg">Synapse IA</CardTitle>
                 <Badge variant="outline" className="text-xs">
                   {getModuleIcon(currentModule)}
                   <span className="ml-1 capitalize">{currentModule}</span>
                 </Badge>
               </div>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setIsExpanded(false)}
-                  className="h-8 w-8 p-0"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsExpanded(false)}
+                className="h-7 w-7 p-0 hover:bg-red-100"
+              >
+                <X className="h-3 w-3" />
+              </Button>
             </div>
 
-            {/* Mode selector */}
-            <div className="flex items-center gap-1 mt-2">
+            {/* Onglets */}
+            <div className="flex w-full bg-muted rounded-lg p-1">
               <Button
-                variant={activeMode === 'gemini' ? "default" : "outline"}
+                variant={activeTab === 'voice' ? "default" : "ghost"}
                 size="sm"
-                onClick={() => setActiveMode('gemini')}
-                className="text-xs"
+                onClick={() => setActiveTab('voice')}
+                className="flex-1 text-xs h-8"
               >
                 <Zap className="h-3 w-3 mr-1" />
-                Gemini Live
+                Voice Assistant
               </Button>
               <Button
-                variant={activeMode === 'synapse' ? "default" : "outline"}
+                variant={activeTab === 'insights' ? "default" : "ghost"}
                 size="sm"
-                onClick={() => setActiveMode('synapse')}
-                className="text-xs"
+                onClick={() => setActiveTab('insights')}
+                className="flex-1 text-xs h-8"
               >
                 <Brain className="h-3 w-3 mr-1" />
-                Synapse
-              </Button>
-              <Button
-                variant={activeMode === 'both' ? "default" : "outline"}
-                size="sm"
-                onClick={() => setActiveMode('both')}
-                className="text-xs"
-              >
-                <Settings2 className="h-3 w-3 mr-1" />
-                Hybride
+                Insights
               </Button>
             </div>
           </CardHeader>
 
-          <CardContent className="space-y-4">
-            {/* Statistiques contextuelles avec données réelles */}
-            <div className="grid grid-cols-2 gap-2 text-xs">
-              <div className="bg-blue-50 p-2 rounded flex items-center gap-1">
-                <Briefcase className="h-3 w-3 text-blue-600" />
-                <span>{stats.projectsCount} projets ({stats.inProgressProjects} actifs)</span>
-              </div>
-              {userRole !== 'client' && (
-                <div className="bg-green-50 p-2 rounded flex items-center gap-1">
-                  <Users className="h-3 w-3 text-green-600" />
-                  <span>{stats.employeesCount} employés</span>
+          <CardContent className="h-[500px] overflow-y-auto">
+            {activeTab === 'voice' && (
+              <div className="space-y-4">
+                {/* Statistiques contextuelles */}
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div className="bg-blue-50 p-2 rounded flex items-center gap-1">
+                    <Briefcase className="h-3 w-3 text-blue-600" />
+                    <span>{stats.projectsCount} projets</span>
+                  </div>
+                  {userRole !== 'client' && (
+                    <div className="bg-green-50 p-2 rounded flex items-center gap-1">
+                      <Users className="h-3 w-3 text-green-600" />
+                      <span>{stats.employeesCount} employés</span>
+                    </div>
+                  )}
+                  <div className="bg-orange-50 p-2 rounded flex items-center gap-1">
+                    <Target className="h-3 w-3 text-orange-600" />
+                    <span>{stats.companiesCount} client{stats.companiesCount > 1 ? 's' : ''}</span>
+                  </div>
+                  <div className="bg-purple-50 p-2 rounded flex items-center gap-1">
+                    <MessageSquare className="h-3 w-3 text-purple-600" />
+                    <span>{stats.tasksCount} tâches</span>
+                  </div>
                 </div>
-              )}
-              <div className="bg-orange-50 p-2 rounded flex items-center gap-1">
-                <Target className="h-3 w-3 text-orange-600" />
-                <span>{stats.companiesCount} client{stats.companiesCount > 1 ? 's' : ''}</span>
-              </div>
-              <div className="bg-purple-50 p-2 rounded flex items-center gap-1">
-                <MessageSquare className="h-3 w-3 text-purple-600" />
-                <span>{stats.tasksCount} tâches ({stats.pendingTasks} en attente)</span>
-              </div>
-              {(userRole === 'admin' || userRole === 'super_admin' || userRole === 'client') && (
-                <>
-                  <div className="bg-yellow-50 p-2 rounded flex items-center gap-1">
-                    <Activity className="h-3 w-3 text-yellow-600" />
-                    <span>{stats.devisCount} devis ({stats.pendingDevis} en cours)</span>
-                  </div>
-                  <div className="bg-green-50 p-2 rounded flex items-center gap-1">
-                    <TrendingUp className="h-3 w-3 text-green-600" />
-                    <span>{stats.invoicesCount} factures ({stats.paidInvoices} payées)</span>
-                  </div>
-                </>
-              )}
-            </div>
 
-            {/* Interface Gemini Live */}
-            {(activeMode === 'gemini' || activeMode === 'both') && (
-              <div className="border rounded-lg p-3 bg-gradient-to-r from-blue-50 to-purple-50">
-                <div className="flex items-center gap-2 mb-2">
-                  <Zap className="h-4 w-4 text-blue-600" />
-                  <span className="text-sm font-medium">Gemini Live</span>
+                {/* Interface Gemini Live */}
+                <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Zap className="h-5 w-5 text-blue-600" />
+                    <span className="font-medium">Synapse Voice Assistant</span>
+                  </div>
+                  <GeminiLiveInterface />
                 </div>
-                <GeminiLiveInterface />
+
+                {/* Instructions */}
+                <div className="text-center text-xs text-muted-foreground bg-muted/50 p-3 rounded">
+                  💬 Conversation vocale intelligente avec accès temps réel à vos données
+                  <div className="mt-1 text-green-600 font-medium">
+                    ✅ Contexte: {currentModule} • {hasData ? 'Données chargées' : 'Aucune donnée'}
+                  </div>
+                </div>
               </div>
             )}
 
-            {/* Synapse Insights */}
-            {(activeMode === 'synapse' || activeMode === 'both') && (
-              <div className="border rounded-lg p-3 bg-gradient-to-r from-purple-50 to-indigo-50">
+            {activeTab === 'insights' && (
+              <div className="space-y-4">
+                {/* Synapse Insights */}
                 <SynapseInsights 
                   context={currentModule}
-                  compact={activeMode === 'both'}
-                  maxInsights={activeMode === 'both' ? 2 : 3}
+                  compact={false}
+                  maxInsights={4}
                 />
+
+                {/* Suggestions contextuelles */}
+                {contextualSuggestions.length > 0 && (
+                  <div>
+                    <h4 className="text-sm font-medium mb-3 flex items-center gap-2">
+                      <MessageSquare className="h-4 w-4" />
+                      Actions suggérées ({contextualSuggestions.length})
+                    </h4>
+                    <div className="space-y-2">
+                      {contextualSuggestions.map((suggestion, index) => (
+                        <Button
+                          key={index}
+                          variant="outline"
+                          size="sm"
+                          className="w-full justify-start text-left h-auto py-2 px-3 hover:bg-primary/5"
+                          onClick={() => handleSuggestionClick(suggestion)}
+                        >
+                          <span className="mr-2">{suggestion.icon}</span>
+                          <span className="text-xs flex-1">{suggestion.text}</span>
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
-
-            {/* Suggestions contextuelles avec données réelles */}
-            {contextualSuggestions.length > 0 && (
-              <div>
-                <h4 className="text-sm font-medium mb-2 flex items-center gap-1">
-                  <MessageSquare className="h-4 w-4" />
-                  Actions suggérées ({contextualSuggestions.length})
-                </h4>
-                <div className="space-y-2 max-h-32 overflow-y-auto">
-                  {contextualSuggestions.map((suggestion, index) => (
-                    <Button
-                      key={index}
-                      variant="outline"
-                      size="sm"
-                      className="w-full justify-start text-left h-auto py-2 px-3 hover:bg-primary/5"
-                      onClick={() => handleSuggestionClick(suggestion)}
-                    >
-                      <span className="mr-2">{suggestion.icon}</span>
-                      <span className="text-xs flex-1">{suggestion.text}</span>
-                    </Button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Instructions contextuelles */}
-            <div className="text-center text-xs text-muted-foreground border-t pt-2">
-              {activeMode === 'gemini' && "💬 Conversation vocale avec contexte temps réel"}
-              {activeMode === 'synapse' && "🧠 Insights intelligents basés sur vos données"}
-              {activeMode === 'both' && "🚀 IA hybride: voix + insights personnalisés"}
-              <div className="mt-1 text-green-600">
-                ✅ {hasData ? 'Données chargées' : 'Aucune donnée'} • Rôle: {userRole}
-              </div>
-            </div>
           </CardContent>
         </Card>
       )}

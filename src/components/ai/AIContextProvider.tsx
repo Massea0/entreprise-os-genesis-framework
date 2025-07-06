@@ -245,6 +245,18 @@ export const AIContextProvider: React.FC<AIContextProviderProps> = ({ children }
     setContextualSuggestions(suggestions);
   }, [contextData, location.pathname]);
 
+  // Mise à jour temps réel des données toutes les 30 secondes
+  useEffect(() => {
+    if (!user) return;
+    
+    const interval = setInterval(() => {
+      console.log('🔄 Rafraîchissement automatique des données IA');
+      refreshContext();
+    }, 30000); // 30 secondes
+
+    return () => clearInterval(interval);
+  }, [user]);
+
   const value: AIContextData = {
     ...contextData,
     currentModule: getCurrentModule(),

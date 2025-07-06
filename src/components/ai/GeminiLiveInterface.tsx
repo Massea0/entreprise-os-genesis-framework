@@ -30,7 +30,7 @@ export const GeminiLiveInterface: React.FC = () => {
       setConnectionStatus('connecting');
       
       // Se connecter au WebSocket Supabase qui fait le relais vers Gemini
-      const wsUrl = `wss://qlqgyrfqiflnqknbtycw.supabase.co/functions/v1/gemini-live-voice`;
+      const wsUrl = `wss://qlqgyrfqiflnqknbtycw.functions.supabase.co/gemini-live-voice`;
       wsRef.current = new WebSocket(wsUrl);
 
       wsRef.current.onopen = () => {
@@ -209,15 +209,7 @@ export const GeminiLiveInterface: React.FC = () => {
   };
 
   return (
-    <Card className="w-full max-w-md mx-auto">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Brain className="h-5 w-5 text-primary" />
-          Gemini Live - Synapse
-        </CardTitle>
-      </CardHeader>
-      
-      <CardContent className="space-y-4">
+    <div className="w-full space-y-4">
         {/* Status de connexion */}
         <div className="text-center">
           {connectionStatus === 'connected' && (
@@ -293,14 +285,13 @@ export const GeminiLiveInterface: React.FC = () => {
           )}
         </div>
 
-        {/* Instructions */}
-        <div className="text-center text-xs text-muted-foreground">
-          {isConnected ? 
-            "Cliquez sur 'Parler' et conversez naturellement avec Synapse" :
-            "Activez Gemini Live pour une conversation vocale fluide"
-          }
-        </div>
-      </CardContent>
-    </Card>
+      {/* Instructions */}
+      <div className="text-center text-xs text-muted-foreground bg-muted/30 p-2 rounded">
+        {isConnected ? 
+          "Cliquez sur 'Parler' et conversez naturellement avec Synapse" :
+          "Activez Gemini Live pour une conversation vocale fluide"
+        }
+      </div>
+    </div>
   );
 };
