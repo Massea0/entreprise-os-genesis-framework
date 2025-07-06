@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { SynapseInsights } from '@/components/ai/SynapseInsights';
 import { 
   Plus, 
   Search, 
@@ -17,13 +18,13 @@ import {
   FileText,
   Calendar,
   DollarSign,
-  Building2
+  Building2,
+  Download,
+  Send,
+  Trash2
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { useAuth } from '@/contexts/AuthContext';
-import AdminQuotes from './AdminQuotes';
-import ClientQuotes from './ClientQuotes';
 
 interface Quote {
   id: string;
@@ -48,17 +49,14 @@ const QUOTE_STATUSES = [
   { value: 'expired', label: 'Expiré', color: 'bg-orange-500' }
 ];
 
-export default function Quotes() {
-  const { user } = useAuth();
-  const userRole = user?.user_metadata?.role || 'client';
+export default function AdminQuotes() {
+  const [quotes, setQuotes] = useState<Quote[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const { toast } = useToast();
 
-  // Redirection vers la vue appropriée selon le rôle
-  if (userRole === 'admin' || userRole === 'super_admin') {
-    return <AdminQuotes />;
-  }
-  
-  return <ClientQuotes />;
-}
+  useEffect(() => {
     loadQuotes();
   }, []);
 
@@ -87,6 +85,58 @@ export default function Quotes() {
     }
   };
 
+  const updateQuoteStatus = async (quoteId: string, newStatus: string) => {
+    try {
+      const { error } = await supabase
+        .from('devis')
+        .update({ status: newStatus })
+        .eq('id', quoteId);
+
+      if (error) throw error;
+      
+      toast({
+        title: "Statut mis à jour",
+        description: "Le statut du devis a été modifié avec succès"
+      });
+      
+      loadQuotes();
+    } catch (error) {
+      console.error('Error updating quote status:', error);
+      toast({
+        variant: "destructive",
+        title: "Erreur",
+        description: "Impossible de mettre à jour le statut"
+      });
+    }
+  };
+
+  const deleteQuote = async (quoteId: string) => {
+    if (!confirm('Êtes-vous sûr de vouloir supprimer ce devis ?')) return;
+    
+    try {
+      const { error } = await supabase
+        .from('devis')
+        .delete()
+        .eq('id', quoteId);
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Devis supprimé",
+        description: "Le devis a été supprimé avec succès"
+      });
+      
+      loadQuotes();
+    } catch (error) {
+      console.error('Error deleting quote:', error);
+      toast({
+        variant: "destructive",
+        title: "Erreur",
+        description: "Impossible de supprimer le devis"
+      });
+    }
+  };
+
   const filteredQuotes = quotes.filter(quote => {
     const matchesSearch = quote.number.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          quote.object.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -107,6 +157,17 @@ export default function Quotes() {
     }).format(amount);
   };
 
+  const getQuoteStats = () => {
+    const total = quotes.reduce((sum, q) => sum + q.amount, 0);
+    const approved = quotes.filter(q => q.status === 'approved').reduce((sum, q) => sum + q.amount, 0);
+    const pending = quotes.filter(q => q.status === 'sent').length;
+    const conversionRate = quotes.length > 0 ? (quotes.filter(q => q.status === 'approved').length / quotes.length * 100) : 0;
+    
+    return { total, approved, pending, conversionRate };
+  };
+
+  const stats = getQuoteStats();
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-96">
@@ -120,28 +181,53 @@ export default function Quotes() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Devis</h1>
+          <h1 className="text-3xl font-bold">Gestion des Devis (Admin)</h1>
           <p className="text-muted-foreground">
-            Gérez vos devis et propositions commerciales
+            Administration complète des devis - Contrôle total
           </p>
         </div>
-        <Link to="/business/quotes/new">
-          <Button>
-            <Plus className="h-4 w-4 mr-2" />
-            Nouveau devis
+        <div className="flex gap-2">
+          <Button variant="outline">
+            <Download className="h-4 w-4 mr-2" />
+            Export
           </Button>
-        </Link>
+          <Link to="/business/quotes/new">
+            <Button>
+              <Plus className="h-4 w-4 mr-2" />
+              Nouveau devis
+            </Button>
+          </Link>
+        </div>
       </div>
 
-      {/* Stats Cards */}
+      {/* Synapse Insights */}
+      <SynapseInsights context="admin-quotes" />
+
+      {/* Enhanced Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Devis</CardTitle>
-            <FileText className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Valeur Totale</CardTitle>
+            <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{quotes.length}</div>
+            <div className="text-2xl font-bold">{formatCurrency(stats.total)}</div>
+            <p className="text-xs text-muted-foreground">
+              {quotes.length} devis au total
+            </p>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Chiffre Signé</CardTitle>
+            <Building2 className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-green-600">{formatCurrency(stats.approved)}</div>
+            <p className="text-xs text-muted-foreground">
+              Devis approuvés
+            </p>
           </CardContent>
         </Card>
         
@@ -151,33 +237,23 @@ export default function Quotes() {
             <Calendar className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {quotes.filter(q => q.status === 'sent').length}
-            </div>
+            <div className="text-2xl font-bold text-blue-600">{stats.pending}</div>
+            <p className="text-xs text-muted-foreground">
+              Réponse client attendue
+            </p>
           </CardContent>
         </Card>
         
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Approuvés</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Taux Conversion</CardTitle>
+            <FileText className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {quotes.filter(q => q.status === 'approved').length}
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Montant Total</CardTitle>
-            <Building2 className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {formatCurrency(quotes.reduce((sum, q) => sum + q.amount, 0))}
-            </div>
+            <div className="text-2xl font-bold text-purple-600">{stats.conversionRate.toFixed(1)}%</div>
+            <p className="text-xs text-muted-foreground">
+              Performance commerciale
+            </p>
           </CardContent>
         </Card>
       </div>
@@ -185,7 +261,7 @@ export default function Quotes() {
       {/* Filters */}
       <Card>
         <CardHeader>
-          <CardTitle>Filtres</CardTitle>
+          <CardTitle>Filtres & Actions</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex gap-4">
@@ -218,12 +294,12 @@ export default function Quotes() {
         </CardContent>
       </Card>
 
-      {/* Quotes Table */}
+      {/* Enhanced Quotes Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Liste des Devis</CardTitle>
+          <CardTitle>Liste des Devis (Vue Admin)</CardTitle>
           <CardDescription>
-            {filteredQuotes.length} devis trouvé{filteredQuotes.length > 1 ? 's' : ''}
+            {filteredQuotes.length} devis trouvé{filteredQuotes.length > 1 ? 's' : ''} - Contrôles administrateur disponibles
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -237,7 +313,7 @@ export default function Quotes() {
                 <TableHead>Statut</TableHead>
                 <TableHead>Validité</TableHead>
                 <TableHead>Date</TableHead>
-                <TableHead>Actions</TableHead>
+                <TableHead>Actions Admin</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -250,15 +326,28 @@ export default function Quotes() {
                     <TableCell className="font-medium">{quote.number}</TableCell>
                     <TableCell>{quote.object}</TableCell>
                     <TableCell>{quote.company?.name || 'N/A'}</TableCell>
-                    <TableCell>{formatCurrency(quote.amount)}</TableCell>
+                    <TableCell className="font-medium">{formatCurrency(quote.amount)}</TableCell>
                     <TableCell>
-                      <Badge variant="secondary" className="gap-1">
-                        <div className={`w-2 h-2 rounded-full ${statusConfig.color}`} />
-                        {statusConfig.label}
-                      </Badge>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="secondary" className="gap-1">
+                          <div className={`w-2 h-2 rounded-full ${statusConfig.color}`} />
+                          {statusConfig.label}
+                        </Badge>
+                        {quote.status === 'sent' && (
+                          <Select onValueChange={(value) => updateQuoteStatus(quote.id, value)}>
+                            <SelectTrigger className="w-20 h-6">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="approved">Approuver</SelectItem>
+                              <SelectItem value="rejected">Rejeter</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell>
-                      <span className={isExpired ? 'text-red-600' : ''}>
+                      <span className={isExpired ? 'text-red-600 font-medium' : ''}>
                         {format(new Date(quote.valid_until), 'dd MMM yyyy', { locale: fr })}
                       </span>
                     </TableCell>
@@ -266,17 +355,28 @@ export default function Quotes() {
                       {format(new Date(quote.created_at), 'dd MMM yyyy', { locale: fr })}
                     </TableCell>
                     <TableCell>
-                      <div className="flex gap-2">
+                      <div className="flex gap-1">
                         <Link to={`/business/quotes/${quote.id}`}>
                           <Button variant="ghost" size="sm">
-                            <Eye className="h-4 w-4" />
+                            <Eye className="h-3 w-3" />
                           </Button>
                         </Link>
                         <Link to={`/business/quotes/${quote.id}/edit`}>
                           <Button variant="ghost" size="sm">
-                            <Edit className="h-4 w-4" />
+                            <Edit className="h-3 w-3" />
                           </Button>
                         </Link>
+                        <Button variant="ghost" size="sm">
+                          <Send className="h-3 w-3" />
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => deleteQuote(quote.id)}
+                          className="text-red-600 hover:text-red-700"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
                       </div>
                     </TableCell>
                   </TableRow>
