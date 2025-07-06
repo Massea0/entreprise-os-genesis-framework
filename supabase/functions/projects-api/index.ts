@@ -30,12 +30,24 @@ serve(async (req) => {
             .from('projects')
             .select(`
               *,
-              tasks(count),
-              client_company:companies(name),
-              owner:users(first_name, last_name, email)
+              client_company:companies(name)
             `)
             .eq('id', projectId)
             .single();
+
+          // Charger séparément l'owner s'il existe
+          let ownerData = null;
+          if (project?.owner_id) {
+            const { data: employeeData } = await supabase
+              .from('employees')
+              .select('first_name, last_name')
+              .eq('user_id', project.owner_id)
+              .single();
+            
+            if (employeeData) {
+              ownerData = employeeData;
+            }
+          }
 
           if (projectError) {
             return new Response(
@@ -57,7 +69,7 @@ serve(async (req) => {
           return new Response(
             JSON.stringify({
               success: true,
-              data: { ...project, progress, tasksCount: totalTasks }
+              data: { ...project, owner: ownerData, progress, tasksCount: totalTasks }
             }),
             { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
@@ -73,8 +85,7 @@ serve(async (req) => {
             .from('projects')
             .select(`
               *,
-              client_company:companies(name),
-              owner:users(first_name, last_name, email)
+              client_company:companies(name)
             `, { count: 'exact' })
             .range((page - 1) * limit, page * limit - 1)
             .order('created_at', { ascending: false });
@@ -98,7 +109,7 @@ serve(async (req) => {
             );
           }
 
-          // Add progress and tasks count for each project
+          // Add progress, tasks count and owner for each project
           const projectsWithStats = await Promise.all(
             (projects || []).map(async (project) => {
               const { data: tasks } = await supabase
@@ -110,7 +121,21 @@ serve(async (req) => {
               const totalTasks = tasks?.length || 0;
               const progress = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
 
-              return { ...project, progress, tasksCount: totalTasks };
+              // Charger le owner si existe
+              let ownerData = null;
+              if (project.owner_id) {
+                const { data: employeeData } = await supabase
+                  .from('employees')
+                  .select('first_name, last_name')
+                  .eq('user_id', project.owner_id)
+                  .single();
+                
+                if (employeeData) {
+                  ownerData = employeeData;
+                }
+              }
+
+              return { ...project, owner: ownerData, progress, tasksCount: totalTasks };
             })
           );
 
