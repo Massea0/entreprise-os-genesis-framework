@@ -32,10 +32,8 @@ mermaid.initialize({
   gantt: {
     titleTopMargin: 25,
     barHeight: 20,
-    fontsize: 11,
-    gridLineStartPadding: 35,
     fontSize: 11,
-    fontFamily: '"Open Sans", "sans-serif"',
+    gridLineStartPadding: 35,
     numberSectionStyles: 4,
   },
 });
