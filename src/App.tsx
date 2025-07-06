@@ -194,6 +194,17 @@ function App() {
                   </ProtectedRoute>
                 } />
 
+                <Route path="/support/knowledge" element={
+                  <ProtectedRoute>
+                    <AppLayout>
+                      <div className="p-6">
+                        <h1 className="text-2xl font-bold mb-4">Base de connaissances</h1>
+                        <p className="text-muted-foreground">Cette section sera bientôt disponible.</p>
+                      </div>
+                    </AppLayout>
+                  </ProtectedRoute>
+                } />
+
                 {/* Redirect unmatched routes to dashboard */}
                 <Route path="*" element={<Navigate to="/dashboard" replace />} />
               </Routes>

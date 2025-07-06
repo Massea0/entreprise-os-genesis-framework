@@ -69,6 +69,14 @@ export default function SupportAdmin() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const { toast } = useToast();
 
+  // Debug: Log when component mounts
+  useEffect(() => {
+    console.log('SupportAdmin component mounted');
+    return () => {
+      console.log('SupportAdmin component unmounted');
+    };
+  }, []);
+
   useEffect(() => {
     loadTickets();
     loadAgents();
