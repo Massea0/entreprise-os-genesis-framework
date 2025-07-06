@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -126,7 +125,13 @@ export const ProjectPlannerAI: React.FC<ProjectPlannerProps> = ({
     if (!generatedPlan) return;
 
     try {
-      // Créer le projet avec les données JSON sérialisées
+      // Créer le projet avec les données dans custom_fields
+      const customFields = {
+        aiGenerated: true,
+        aiPlan: generatedPlan,
+        priority: projectData.priority
+      };
+
       const { data: project, error: projectError } = await supabase
         .from('projects')
         .insert({
@@ -137,11 +142,7 @@ export const ProjectPlannerAI: React.FC<ProjectPlannerProps> = ({
           budget: generatedPlan.estimatedBudget,
           start_date: new Date().toISOString(),
           end_date: new Date(Date.now() + generatedPlan.totalDuration * 24 * 60 * 60 * 1000).toISOString(),
-          custom_fields: {
-            aiGenerated: true,
-            aiPlan: JSON.parse(JSON.stringify(generatedPlan)), // Sérialisation explicite
-            priority: projectData.priority
-          } as any
+          custom_fields: customFields
         })
         .select()
         .single();
@@ -164,7 +165,7 @@ export const ProjectPlannerAI: React.FC<ProjectPlannerProps> = ({
             taskIndex,
             requiredSkills: task.requiredSkills,
             aiGenerated: true
-          } as any,
+          },
           position: phaseIndex * 1000 + taskIndex
         }))
       );
