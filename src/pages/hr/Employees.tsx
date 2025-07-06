@@ -10,6 +10,7 @@ import { EmployeeForm } from '@/components/hr/EmployeeForm';
 import { EmployeeCard } from '@/components/hr/EmployeeCard';
 import { EmployeeFilters } from '@/components/hr/EmployeeFilters';
 import { EmployeeStats } from '@/components/hr/EmployeeStats';
+import { SynapseInsights } from '@/components/ai/SynapseInsights';
 
 export default function Employees() {
   const navigate = useNavigate();
@@ -220,6 +221,9 @@ export default function Employees() {
         departments={departments}
         positions={positions}
       />
+
+      {/* Synapse Insights */}
+      <SynapseInsights context="hr" />
 
       {/* Filtres */}
       <EmployeeFilters

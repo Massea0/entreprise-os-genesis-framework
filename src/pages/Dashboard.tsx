@@ -6,6 +6,7 @@ import { Users, FileText, MessageSquare, TrendingUp, Brain, Sparkles } from 'luc
 import { useAuth } from '@/contexts/AuthContext';
 import { MetricCard } from '@/components/ui/MetricCard';
 import { AIInsightsDashboard } from '@/components/ai/AIInsightsDashboard';
+import { SynapseInsights } from '@/components/ai/SynapseInsights';
 import { useState } from 'react';
 
 export default function Dashboard() {
@@ -86,9 +87,15 @@ export default function Dashboard() {
 
       {/* Vue Insights IA ou Dashboard Standard */}
       {showAIInsights ? (
-        <AIInsightsDashboard />
+        <div className="space-y-6">
+          <SynapseInsights context="dashboard" />
+          <AIInsightsDashboard />
+        </div>
       ) : (
         <>
+          {/* Synapse Insights Compact */}
+          <SynapseInsights context="dashboard" compact={true} />
+          
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {filteredStats.map((stat) => (
               <MetricCard

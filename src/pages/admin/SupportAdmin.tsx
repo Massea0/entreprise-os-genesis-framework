@@ -1,15 +1,16 @@
-import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
-import SupportDashboard from '@/components/support/SupportDashboard';
-import TicketView from '@/components/support/TicketView';
+import React, { useState, useEffect } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import SupportDashboard from "@/components/support/SupportDashboard";
+import TicketView from "@/components/support/TicketView";
+import { SynapseInsights } from "@/components/ai/SynapseInsights";
 import {
   Search,
   Filter,
@@ -28,7 +29,7 @@ import {
   Target,
   Heart,
   Zap
-} from 'lucide-react';
+} from "lucide-react";
 
 interface Ticket {
   id: string;
@@ -195,6 +196,9 @@ export default function SupportAdmin() {
 
   return (
     <div className="space-y-6 p-6 bg-gradient-to-br from-slate-50 to-blue-50/20 min-h-screen">
+      {/* Synapse Insights */}
+      <SynapseInsights context="support" />
+      
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

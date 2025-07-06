@@ -10,6 +10,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { ProjectPlannerAI } from '@/components/projects/ProjectPlannerAI';
+import { SynapseInsights } from '@/components/ai/SynapseInsights';
 import { 
   Plus, 
   Search, 
@@ -219,6 +220,9 @@ export default function Projects() {
           </div>
         </div>
       )}
+
+      {/* Synapse Insights */}
+      <SynapseInsights context="projects" />
 
       {/* Statistiques */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
