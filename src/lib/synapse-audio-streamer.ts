@@ -4,7 +4,7 @@
  * Gestion optimisée du streaming audio bidirectionnel
  */
 
-import { EventEmitter } from 'events';
+import { EventEmitter } from 'eventemitter3';
 import { 
   registerWorklet, 
   getWorklet, 

@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { GeminiLiveInterface } from './GeminiLiveInterface';
+import { SynapseVoiceInterface } from './SynapseVoiceInterface';
 import { useAIContext } from './AIContextProvider';
 import { 
   Bot, 
@@ -162,7 +162,7 @@ export const GlobalVoiceAssistant: React.FC<GlobalVoiceAssistantProps> = ({
 
             {/* Interface Gemini Live */}
             {useGeminiLive ? (
-              <GeminiLiveInterface />
+              <SynapseVoiceInterface />
             ) : (
               <div className="text-center text-sm text-muted-foreground">
                 Mode classique (à implémenter si nécessaire)

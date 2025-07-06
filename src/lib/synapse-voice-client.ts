@@ -4,7 +4,7 @@
  * Architecture event-driven avec WebSocket robuste et gestion du contexte entreprise
  */
 
-import { EventEmitter } from 'events';
+import { EventEmitter } from 'eventemitter3';
 import { SynapseAudioStreamer, AudioChunkData, VolumeData, SpeechStateData } from './synapse-audio-streamer';
 
 // Ré-export des types pour l'API publique
@@ -187,25 +187,36 @@ export class SynapseVoiceClient extends EventEmitter {
    * Connexion au service Synapse
    */
   async connect(): Promise<void> {
+    console.log('🔄 SynapseVoiceClient.connect() appelé, status:', this._status);
+    
     if (this._status === 'connecting' || this._status === 'connected') {
+      console.log('⚠️ Déjà en cours de connexion ou connecté');
       return;
     }
 
     this.setStatus('connecting');
+    console.log('📡 Status changé vers "connecting"');
     
     try {
       // Initialiser le contexte audio
+      console.log('🎵 Initialisation audio...');
       await this.initializeAudio();
+      console.log('✅ Audio initialisé');
       
       // Établir la connexion WebSocket
+      console.log('🌐 Connexion WebSocket...');
       await this.connectWebSocket();
+      console.log('✅ WebSocket connecté');
       
       // Initialiser la session
+      console.log('🔑 Initialisation session...');
       await this.initializeSession();
+      console.log('✅ Session initialisée');
       
       this.setStatus('connected');
       this.reconnectAttempts = 0;
       this.emit('connected');
+      console.log('🎉 Connexion Synapse réussie!');
       
     } catch (error) {
       console.error('Erreur de connexion Synapse:', error);
@@ -494,8 +505,20 @@ export class SynapseVoiceClient extends EventEmitter {
           this.lastHeartbeat = Date.now();
           break;
           
+        case 'connection_established':
+          console.log('✅ Connexion Synapse établie');
+          break;
+          
+        case 'warning':
+          if (message.data) {
+            console.warn('⚠️ Avertissement Synapse:', message.data);
+          } else {
+            console.warn('⚠️ Avertissement Synapse reçu (sans détails)');
+          }
+          break;
+          
         default:
-          console.warn('Type de message WebSocket non reconnu:', message.type);
+          console.warn('Type de message WebSocket non reconnu:', message.type, message);
       }
       
     } catch (error) {

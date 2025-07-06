@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { GeminiLiveInterface } from './GeminiLiveInterface';
+import { SynapseVoiceInterface } from './SynapseVoiceInterface';
 import { SynapseInsights } from './SynapseInsights';
 import { useAIContext } from './AIContextProvider';
 import { useAuth } from '@/contexts/AuthContext';
@@ -226,7 +226,7 @@ export const EnhancedGlobalVoiceAssistant: React.FC<EnhancedGlobalVoiceAssistant
                       <p className="text-xs text-gray-600">Assistant vocal intelligent avec accès données</p>
                     </div>
                   </div>
-                  <GeminiLiveInterface />
+                  <SynapseVoiceInterface />
                 </div>
 
                 {/* Instructions améliorées */}
