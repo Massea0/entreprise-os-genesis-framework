@@ -4,9 +4,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -31,7 +33,10 @@ import {
   TrendingUp,
   Users,
   Target,
-  Paperclip
+  Paperclip,
+  Sparkles,
+  Layout,
+  CheckSquare
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -76,6 +81,8 @@ export default function TaskDetailGitLab() {
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<'detail' | 'planning'>('detail');
+  const [enhancing, setEnhancing] = useState(false);
   const [editForm, setEditForm] = useState({
     title: '',
     description: '',
@@ -252,6 +259,37 @@ export default function TaskDetailGitLab() {
     }
   };
 
+  const handleEnhanceTask = async (action: string) => {
+    if (!id) return;
+    
+    setEnhancing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('enhance-task', {
+        body: { taskId: id, action }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Tâche améliorée",
+        description: "Les suggestions IA ont été générées avec succès"
+      });
+
+      // Afficher les résultats selon le type
+      console.log('Enhancement result:', data);
+      
+    } catch (error) {
+      console.error('Erreur lors de l\'amélioration:', error);
+      toast({
+        variant: "destructive",
+        title: "Erreur",
+        description: "Impossible d'améliorer la tâche"
+      });
+    } finally {
+      setEnhancing(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-96">
@@ -327,9 +365,26 @@ export default function TaskDetailGitLab() {
 
       {/* Content */}
       <div className="max-w-7xl mx-auto px-4 py-6">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* Main Content - 3 colonnes */}
-          <div className="lg:col-span-3 space-y-6">
+        {/* Toggle View Mode */}
+        <div className="mb-6">
+          <Tabs value={viewMode} onValueChange={(value: any) => setViewMode(value)}>
+            <TabsList className="grid w-full max-w-md grid-cols-2">
+              <TabsTrigger value="detail" className="flex items-center gap-2">
+                <MessageSquare className="h-4 w-4" />
+                Vue Détail
+              </TabsTrigger>
+              <TabsTrigger value="planning" className="flex items-center gap-2">
+                <Layout className="h-4 w-4" />
+                Vue Planning
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
+
+        {viewMode === 'detail' ? (
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            {/* Main Content - 3 colonnes */}
+            <div className="lg:col-span-3 space-y-6">
             {/* Title and Description */}
             <Card className="border-0 shadow-sm">
               <CardContent className="p-6">
@@ -611,8 +666,171 @@ export default function TaskDetailGitLab() {
                 </div>
               </CardContent>
             </Card>
+            </div>
           </div>
+        ) : (
+        /* Vue Planning Style Notion */
+        <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Layout className="h-5 w-5" />
+                Vue Planning
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              
+              {/* Métriques rapides */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="p-4 bg-muted/50 rounded-lg">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Timer className="h-4 w-4 text-primary" />
+                    <span className="text-sm font-medium">Estimation</span>
+                  </div>
+                  <p className="text-2xl font-bold">{task.estimated_hours || 0}h</p>
+                </div>
+                
+                <div className="p-4 bg-muted/50 rounded-lg">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Clock className="h-4 w-4 text-blue-600" />
+                    <span className="text-sm font-medium">Temps passé</span>
+                  </div>
+                  <p className="text-2xl font-bold">{task.actual_hours || 0}h</p>
+                </div>
+                
+                <div className="p-4 bg-muted/50 rounded-lg">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Target className="h-4 w-4 text-green-600" />
+                    <span className="text-sm font-medium">Priorité</span>
+                  </div>
+                  <Badge variant={task.priority === 'high' ? 'destructive' : 'secondary'}>
+                    {task.priority}
+                  </Badge>
+                </div>
+                
+                <div className="p-4 bg-muted/50 rounded-lg">
+                  <div className="flex items-center gap-2 mb-2">
+                    <CheckSquare className="h-4 w-4 text-purple-600" />
+                    <span className="text-sm font-medium">Statut</span>
+                  </div>
+                  <Badge variant="outline">{task.status}</Badge>
+                </div>
+              </div>
+
+              {/* Actions d'amélioration IA */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold flex items-center gap-2">
+                  <Sparkles className="h-5 w-5 text-primary" />
+                  Améliorations IA
+                </h3>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <Button 
+                    variant="outline" 
+                    onClick={() => handleEnhanceTask('enhance_description')}
+                    disabled={enhancing}
+                    className="justify-start h-auto p-4"
+                  >
+                    <div className="text-left">
+                      <div className="font-medium">Améliorer description</div>
+                      <div className="text-sm text-muted-foreground">Rendre plus claire et détaillée</div>
+                    </div>
+                  </Button>
+                  
+                  <Button 
+                    variant="outline" 
+                    onClick={() => handleEnhanceTask('suggest_subtasks')}
+                    disabled={enhancing}
+                    className="justify-start h-auto p-4"
+                  >
+                    <div className="text-left">
+                      <div className="font-medium">Suggérer sous-tâches</div>
+                      <div className="text-sm text-muted-foreground">Décomposer en étapes</div>
+                    </div>
+                  </Button>
+                  
+                  <Button 
+                    variant="outline" 
+                    onClick={() => handleEnhanceTask('estimate_effort')}
+                    disabled={enhancing}
+                    className="justify-start h-auto p-4"
+                  >
+                    <div className="text-left">
+                      <div className="font-medium">Estimer l'effort</div>
+                      <div className="text-sm text-muted-foreground">Calculer le temps nécessaire</div>
+                    </div>
+                  </Button>
+                  
+                  <Button 
+                    variant="outline" 
+                    onClick={() => handleEnhanceTask('suggest_acceptance_criteria')}
+                    disabled={enhancing}
+                    className="justify-start h-auto p-4"
+                  >
+                    <div className="text-left">
+                      <div className="font-medium">Critères d'acceptation</div>
+                      <div className="text-sm text-muted-foreground">Définir les conditions de succès</div>
+                    </div>
+                  </Button>
+                </div>
+              </div>
+
+              {/* Timeline / Échéances */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold">Planification</h3>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Date de début</Label>
+                    <div className="p-3 bg-muted/50 rounded-md">
+                      {task.created_at ? new Date(task.created_at).toLocaleDateString('fr-FR') : 'Non définie'}
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label>Échéance</Label>
+                    <div className="p-3 bg-muted/50 rounded-md">
+                      {task.due_date ? new Date(task.due_date).toLocaleDateString('fr-FR') : 'Non définie'}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Assignation et ressources */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold">Ressources</h3>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Assigné à</Label>
+                    <div className="p-3 bg-muted/50 rounded-md">
+                      {task.assignee ? (
+                        <div className="flex items-center gap-2">
+                          <Avatar className="h-6 w-6">
+                            <AvatarFallback className="text-xs">
+                              {task.assignee.first_name?.[0]}{task.assignee.last_name?.[0]}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span>{task.assignee.first_name} {task.assignee.last_name}</span>
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground">Non assigné</span>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label>Projet</Label>
+                    <div className="p-3 bg-muted/50 rounded-md">
+                      {task.project?.name || 'Aucun projet'}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
+      )}
       </div>
     </div>
   );

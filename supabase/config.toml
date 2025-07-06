@@ -79,3 +79,6 @@ verify_jwt = true
 
 [functions.ai-work-organizer]
 verify_jwt = true
+
+[functions.enhance-task]
+verify_jwt = true
