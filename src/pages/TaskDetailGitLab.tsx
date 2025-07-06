@@ -14,6 +14,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import TaskComments from '@/components/tasks/TaskComments';
 import AssigneeSelector from '@/components/tasks/AssigneeSelector';
+import MermaidTaskViewer from '@/components/diagrams/MermaidTaskViewer';
+import { format } from 'date-fns';
+import { fr } from 'date-fns/locale';
 import { 
   ArrowLeft, 
   Calendar, 
@@ -38,8 +41,6 @@ import {
   Layout,
   CheckSquare
 } from 'lucide-react';
-import { format } from 'date-fns';
-import { fr } from 'date-fns/locale';
 
 interface Task {
   id: string;
@@ -669,168 +670,171 @@ export default function TaskDetailGitLab() {
             </div>
           </div>
         ) : (
-        /* Vue Planning Style Notion */
-        <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Layout className="h-5 w-5" />
-                Vue Planning
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              
-              {/* Métriques rapides */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="p-4 bg-muted/50 rounded-lg">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Timer className="h-4 w-4 text-primary" />
-                    <span className="text-sm font-medium">Estimation</span>
-                  </div>
-                  <p className="text-2xl font-bold">{task.estimated_hours || 0}h</p>
-                </div>
+          /* Vue Planning Style Notion */
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Layout className="h-5 w-5" />
+                  Vue Planning
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
                 
-                <div className="p-4 bg-muted/50 rounded-lg">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Clock className="h-4 w-4 text-blue-600" />
-                    <span className="text-sm font-medium">Temps passé</span>
+                {/* Métriques rapides */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="p-4 bg-muted/50 rounded-lg">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Timer className="h-4 w-4 text-primary" />
+                      <span className="text-sm font-medium">Estimation</span>
+                    </div>
+                    <p className="text-2xl font-bold">{task.estimated_hours || 0}h</p>
                   </div>
-                  <p className="text-2xl font-bold">{task.actual_hours || 0}h</p>
-                </div>
-                
-                <div className="p-4 bg-muted/50 rounded-lg">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Target className="h-4 w-4 text-green-600" />
-                    <span className="text-sm font-medium">Priorité</span>
+                  
+                  <div className="p-4 bg-muted/50 rounded-lg">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Clock className="h-4 w-4 text-blue-600" />
+                      <span className="text-sm font-medium">Temps passé</span>
+                    </div>
+                    <p className="text-2xl font-bold">{task.actual_hours || 0}h</p>
                   </div>
-                  <Badge variant={task.priority === 'high' ? 'destructive' : 'secondary'}>
-                    {task.priority}
-                  </Badge>
-                </div>
-                
-                <div className="p-4 bg-muted/50 rounded-lg">
-                  <div className="flex items-center gap-2 mb-2">
-                    <CheckSquare className="h-4 w-4 text-purple-600" />
-                    <span className="text-sm font-medium">Statut</span>
+                  
+                  <div className="p-4 bg-muted/50 rounded-lg">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Target className="h-4 w-4 text-green-600" />
+                      <span className="text-sm font-medium">Priorité</span>
+                    </div>
+                    <Badge variant={task.priority === 'high' ? 'destructive' : 'secondary'}>
+                      {task.priority}
+                    </Badge>
                   </div>
-                  <Badge variant="outline">{task.status}</Badge>
+                  
+                  <div className="p-4 bg-muted/50 rounded-lg">
+                    <div className="flex items-center gap-2 mb-2">
+                      <CheckSquare className="h-4 w-4 text-purple-600" />
+                      <span className="text-sm font-medium">Statut</span>
+                    </div>
+                    <Badge variant="outline">{task.status}</Badge>
+                  </div>
                 </div>
-              </div>
 
-              {/* Actions d'amélioration IA */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold flex items-center gap-2">
-                  <Sparkles className="h-5 w-5 text-primary" />
-                  Améliorations IA
-                </h3>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <Button 
-                    variant="outline" 
-                    onClick={() => handleEnhanceTask('enhance_description')}
-                    disabled={enhancing}
-                    className="justify-start h-auto p-4"
-                  >
-                    <div className="text-left">
-                      <div className="font-medium">Améliorer description</div>
-                      <div className="text-sm text-muted-foreground">Rendre plus claire et détaillée</div>
-                    </div>
-                  </Button>
-                  
-                  <Button 
-                    variant="outline" 
-                    onClick={() => handleEnhanceTask('suggest_subtasks')}
-                    disabled={enhancing}
-                    className="justify-start h-auto p-4"
-                  >
-                    <div className="text-left">
-                      <div className="font-medium">Suggérer sous-tâches</div>
-                      <div className="text-sm text-muted-foreground">Décomposer en étapes</div>
-                    </div>
-                  </Button>
-                  
-                  <Button 
-                    variant="outline" 
-                    onClick={() => handleEnhanceTask('estimate_effort')}
-                    disabled={enhancing}
-                    className="justify-start h-auto p-4"
-                  >
-                    <div className="text-left">
-                      <div className="font-medium">Estimer l'effort</div>
-                      <div className="text-sm text-muted-foreground">Calculer le temps nécessaire</div>
-                    </div>
-                  </Button>
-                  
-                  <Button 
-                    variant="outline" 
-                    onClick={() => handleEnhanceTask('suggest_acceptance_criteria')}
-                    disabled={enhancing}
-                    className="justify-start h-auto p-4"
-                  >
-                    <div className="text-left">
-                      <div className="font-medium">Critères d'acceptation</div>
-                      <div className="text-sm text-muted-foreground">Définir les conditions de succès</div>
-                    </div>
-                  </Button>
-                </div>
-              </div>
+                {/* Visualisation Mermaid IA */}
+                <MermaidTaskViewer taskId={id!} taskTitle={task.title} />
 
-              {/* Timeline / Échéances */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold">Planification</h3>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Date de début</Label>
-                    <div className="p-3 bg-muted/50 rounded-md">
-                      {task.created_at ? new Date(task.created_at).toLocaleDateString('fr-FR') : 'Non définie'}
-                    </div>
-                  </div>
+                {/* Actions d'amélioration IA */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold flex items-center gap-2">
+                    <Sparkles className="h-5 w-5 text-primary" />
+                    Améliorations IA
+                  </h3>
                   
-                  <div className="space-y-2">
-                    <Label>Échéance</Label>
-                    <div className="p-3 bg-muted/50 rounded-md">
-                      {task.due_date ? new Date(task.due_date).toLocaleDateString('fr-FR') : 'Non définie'}
-                    </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <Button 
+                      variant="outline" 
+                      onClick={() => handleEnhanceTask('enhance_description')}
+                      disabled={enhancing}
+                      className="justify-start h-auto p-4"
+                    >
+                      <div className="text-left">
+                        <div className="font-medium">Améliorer description</div>
+                        <div className="text-sm text-muted-foreground">Rendre plus claire et détaillée</div>
+                      </div>
+                    </Button>
+                    
+                    <Button 
+                      variant="outline" 
+                      onClick={() => handleEnhanceTask('suggest_subtasks')}
+                      disabled={enhancing}
+                      className="justify-start h-auto p-4"
+                    >
+                      <div className="text-left">
+                        <div className="font-medium">Suggérer sous-tâches</div>
+                        <div className="text-sm text-muted-foreground">Décomposer en étapes</div>
+                      </div>
+                    </Button>
+                    
+                    <Button 
+                      variant="outline" 
+                      onClick={() => handleEnhanceTask('estimate_effort')}
+                      disabled={enhancing}
+                      className="justify-start h-auto p-4"
+                    >
+                      <div className="text-left">
+                        <div className="font-medium">Estimer l'effort</div>
+                        <div className="text-sm text-muted-foreground">Calculer le temps nécessaire</div>
+                      </div>
+                    </Button>
+                    
+                    <Button 
+                      variant="outline" 
+                      onClick={() => handleEnhanceTask('suggest_acceptance_criteria')}
+                      disabled={enhancing}
+                      className="justify-start h-auto p-4"
+                    >
+                      <div className="text-left">
+                        <div className="font-medium">Critères d'acceptation</div>
+                        <div className="text-sm text-muted-foreground">Définir les conditions de succès</div>
+                      </div>
+                    </Button>
                   </div>
                 </div>
-              </div>
 
-              {/* Assignation et ressources */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold">Ressources</h3>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Assigné à</Label>
-                    <div className="p-3 bg-muted/50 rounded-md">
-                      {task.assignee ? (
-                        <div className="flex items-center gap-2">
-                          <Avatar className="h-6 w-6">
-                            <AvatarFallback className="text-xs">
-                              {task.assignee.first_name?.[0]}{task.assignee.last_name?.[0]}
-                            </AvatarFallback>
-                          </Avatar>
-                          <span>{task.assignee.first_name} {task.assignee.last_name}</span>
-                        </div>
-                      ) : (
-                        <span className="text-muted-foreground">Non assigné</span>
-                      )}
-                    </div>
-                  </div>
+                {/* Timeline / Échéances */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold">Planification</h3>
                   
-                  <div className="space-y-2">
-                    <Label>Projet</Label>
-                    <div className="p-3 bg-muted/50 rounded-md">
-                      {task.project?.name || 'Aucun projet'}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Date de début</Label>
+                      <div className="p-3 bg-muted/50 rounded-md">
+                        {task.created_at ? new Date(task.created_at).toLocaleDateString('fr-FR') : 'Non définie'}
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label>Échéance</Label>
+                      <div className="p-3 bg-muted/50 rounded-md">
+                        {task.due_date ? new Date(task.due_date).toLocaleDateString('fr-FR') : 'Non définie'}
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
+
+                {/* Assignation et ressources */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold">Ressources</h3>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Assigné à</Label>
+                      <div className="p-3 bg-muted/50 rounded-md">
+                        {task.assignee ? (
+                          <div className="flex items-center gap-2">
+                            <Avatar className="h-6 w-6">
+                              <AvatarFallback className="text-xs">
+                                {task.assignee.first_name?.[0]}{task.assignee.last_name?.[0]}
+                              </AvatarFallback>
+                            </Avatar>
+                            <span>{task.assignee.first_name} {task.assignee.last_name}</span>
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground">Non assigné</span>
+                        )}
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label>Projet</Label>
+                      <div className="p-3 bg-muted/50 rounded-md">
+                        {task.project?.name || 'Aucun projet'}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
       </div>
     </div>
   );
