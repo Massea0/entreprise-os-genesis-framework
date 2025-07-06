@@ -27,6 +27,7 @@ export const usePageInsights = () => {
     if (location.pathname.includes('/employees') || location.pathname.includes('/hr')) return 'hr';
     if (location.pathname.includes('/dashboard')) return 'dashboard';
     if (location.pathname.includes('/clients') || location.pathname.includes('/business/clients')) return 'clients';
+    if (location.pathname.includes('/support')) return 'support';
     return 'general';
   };
 
@@ -269,6 +270,67 @@ export const usePageInsights = () => {
               confidence: 1.0,
               timestamp: new Date().toISOString(),
               data: { totalInsights: 0 }
+            });
+          }
+          break;
+
+        case 'support':
+          console.log('Fetching support tickets data...');
+          const { data: ticketsData, error: ticketsError } = await supabase.from('tickets').select('*').limit(50);
+          console.log('Tickets data:', ticketsData, 'Error:', ticketsError);
+          
+          if (ticketsData && ticketsData.length > 0) {
+            const openTickets = ticketsData.filter(t => t.status === 'open' || t.status === 'in_progress');
+            const urgentTickets = ticketsData.filter(t => t.priority === 'urgent' || t.priority === 'high');
+            const resolvedTickets = ticketsData.filter(t => t.status === 'resolved' || t.status === 'closed');
+            
+            if (urgentTickets.length > 0) {
+              newInsights.push({
+                id: `support-urgent-${Date.now()}`,
+                pageContext: 'support',
+                title: `🚨 ${urgentTickets.length} tickets urgents`,
+                description: `Attention requise immédiatement. ${openTickets.length} tickets encore ouverts au total.`,
+                type: 'critical',
+                confidence: 1.0,
+                timestamp: new Date().toISOString(),
+                data: { urgentCount: urgentTickets.length, openCount: openTickets.length }
+              });
+            } else if (openTickets.length > 0) {
+              newInsights.push({
+                id: `support-open-${Date.now()}`,
+                pageContext: 'support',
+                title: `📞 ${openTickets.length} tickets ouverts`,
+                description: `Support client actif. ${resolvedTickets.length} tickets résolus récemment.`,
+                type: 'warning',
+                confidence: 0.9,
+                timestamp: new Date().toISOString(),
+                data: { openCount: openTickets.length, resolvedCount: resolvedTickets.length }
+              });
+            }
+
+            // Taux de résolution
+            const resolutionRate = ticketsData.length > 0 ? Math.round(resolvedTickets.length / ticketsData.length * 100) : 0;
+            newInsights.push({
+              id: `support-performance-${Date.now()}`,
+              pageContext: 'support',
+              title: `📊 Performance support`,
+              description: `${ticketsData.length} tickets totaux, taux de résolution: ${resolutionRate}%`,
+              type: resolutionRate > 80 ? 'success' : resolutionRate > 60 ? 'info' : 'warning',
+              confidence: 0.85,
+              timestamp: new Date().toISOString(),
+              data: { totalCount: ticketsData.length, resolutionRate, resolvedCount: resolvedTickets.length }
+            });
+          } else {
+            // Insight même sans données
+            newInsights.push({
+              id: `support-empty-${Date.now()}`,
+              pageContext: 'support',
+              title: `🎧 Aucun ticket trouvé`,
+              description: `Système de support prêt à recevoir les demandes clients.`,
+              type: 'info',
+              confidence: 1.0,
+              timestamp: new Date().toISOString(),
+              data: { totalCount: 0 }
             });
           }
           break;
