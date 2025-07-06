@@ -1399,32 +1399,162 @@ export type Database = {
           },
         ]
       }
+      task_assignment_suggestions: {
+        Row: {
+          confidence_score: number | null
+          created_at: string | null
+          id: string
+          is_applied: boolean | null
+          suggested_assignee: string
+          suggestion_reasons: Json | null
+          task_id: string
+        }
+        Insert: {
+          confidence_score?: number | null
+          created_at?: string | null
+          id?: string
+          is_applied?: boolean | null
+          suggested_assignee: string
+          suggestion_reasons?: Json | null
+          task_id: string
+        }
+        Update: {
+          confidence_score?: number | null
+          created_at?: string | null
+          id?: string
+          is_applied?: boolean | null
+          suggested_assignee?: string
+          suggestion_reasons?: Json | null
+          task_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_assignment_suggestions_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      task_assignments_history: {
+        Row: {
+          assigned_by: string
+          assigned_to: string | null
+          assignment_reason: string | null
+          created_at: string | null
+          id: string
+          previous_assignee: string | null
+          task_id: string
+        }
+        Insert: {
+          assigned_by: string
+          assigned_to?: string | null
+          assignment_reason?: string | null
+          created_at?: string | null
+          id?: string
+          previous_assignee?: string | null
+          task_id: string
+        }
+        Update: {
+          assigned_by?: string
+          assigned_to?: string | null
+          assignment_reason?: string | null
+          created_at?: string | null
+          id?: string
+          previous_assignee?: string | null
+          task_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_assignments_history_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      task_comment_reactions: {
+        Row: {
+          comment_id: string
+          created_at: string | null
+          id: string
+          reaction_type: string
+          user_id: string
+        }
+        Insert: {
+          comment_id: string
+          created_at?: string | null
+          id?: string
+          reaction_type: string
+          user_id: string
+        }
+        Update: {
+          comment_id?: string
+          created_at?: string | null
+          id?: string
+          reaction_type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_comment_reactions_comment_id_fkey"
+            columns: ["comment_id"]
+            isOneToOne: false
+            referencedRelation: "task_comments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       task_comments: {
         Row: {
+          attachments: Json | null
           content: string
           created_at: string
+          edit_history: Json | null
           id: string
+          is_edited: boolean | null
+          mentions: Json | null
+          parent_comment_id: string | null
           task_id: string
           updated_at: string
           user_id: string
         }
         Insert: {
+          attachments?: Json | null
           content: string
           created_at?: string
+          edit_history?: Json | null
           id?: string
+          is_edited?: boolean | null
+          mentions?: Json | null
+          parent_comment_id?: string | null
           task_id: string
           updated_at?: string
           user_id: string
         }
         Update: {
+          attachments?: Json | null
           content?: string
           created_at?: string
+          edit_history?: Json | null
           id?: string
+          is_edited?: boolean | null
+          mentions?: Json | null
+          parent_comment_id?: string | null
           task_id?: string
           updated_at?: string
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "task_comments_parent_comment_id_fkey"
+            columns: ["parent_comment_id"]
+            isOneToOne: false
+            referencedRelation: "task_comments"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "task_comments_task_id_fkey"
             columns: ["task_id"]
@@ -1438,48 +1568,69 @@ export type Database = {
         Row: {
           actual_hours: number | null
           assignee_id: string | null
+          blocked_by: string[] | null
+          blocking: string[] | null
+          complexity_score: number | null
           created_at: string | null
           custom_fields: Json | null
           description: string | null
           due_date: string | null
           estimated_hours: number | null
           id: string
+          labels: Json | null
+          last_activity_at: string | null
+          milestone_id: string | null
           position: number | null
           priority: string
           project_id: string
           status: string
+          time_tracking: Json | null
           title: string
           updated_at: string | null
         }
         Insert: {
           actual_hours?: number | null
           assignee_id?: string | null
+          blocked_by?: string[] | null
+          blocking?: string[] | null
+          complexity_score?: number | null
           created_at?: string | null
           custom_fields?: Json | null
           description?: string | null
           due_date?: string | null
           estimated_hours?: number | null
           id?: string
+          labels?: Json | null
+          last_activity_at?: string | null
+          milestone_id?: string | null
           position?: number | null
           priority?: string
           project_id: string
           status?: string
+          time_tracking?: Json | null
           title: string
           updated_at?: string | null
         }
         Update: {
           actual_hours?: number | null
           assignee_id?: string | null
+          blocked_by?: string[] | null
+          blocking?: string[] | null
+          complexity_score?: number | null
           created_at?: string | null
           custom_fields?: Json | null
           description?: string | null
           due_date?: string | null
           estimated_hours?: number | null
           id?: string
+          labels?: Json | null
+          last_activity_at?: string | null
+          milestone_id?: string | null
           position?: number | null
           priority?: string
           project_id?: string
           status?: string
+          time_tracking?: Json | null
           title?: string
           updated_at?: string | null
         }
