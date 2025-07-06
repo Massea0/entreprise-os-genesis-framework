@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AppLayout } from "@/components/layout/AppLayout";
+import { AIContextProvider } from "@/components/ai/AIContextProvider";
 
 // Pages
 import Index from "./pages/Index";
@@ -38,145 +39,147 @@ function App() {
         <Sonner />
         <BrowserRouter>
           <AuthProvider>
-            <Routes>
-              {/* Public routes */}
-              <Route path="/login" element={<Login />} />
-              <Route path="/register" element={<Register />} />
-              
-              {/* Protected routes with layout */}
-              <Route path="/" element={
-                <ProtectedRoute>
-                  <AppLayout>
-                    <Index />
-                  </AppLayout>
-                </ProtectedRoute>
-              } />
-              
-              <Route path="/dashboard" element={
-                <ProtectedRoute>
-                  <AppLayout>
-                    <Dashboard />
-                  </AppLayout>
-                </ProtectedRoute>
-              } />
+            <AIContextProvider>
+              <Routes>
+                {/* Public routes */}
+                <Route path="/login" element={<Login />} />
+                <Route path="/register" element={<Register />} />
+                
+                {/* Protected routes with layout */}
+                <Route path="/" element={
+                  <ProtectedRoute>
+                    <AppLayout>
+                      <Index />
+                    </AppLayout>
+                  </ProtectedRoute>
+                } />
+                
+                <Route path="/dashboard" element={
+                  <ProtectedRoute>
+                    <AppLayout>
+                      <Dashboard />
+                    </AppLayout>
+                  </ProtectedRoute>
+                } />
 
-              <Route path="/work-dashboard" element={
-                <ProtectedRoute>
-                  <AppLayout>
-                    <WorkDashboard />
-                  </AppLayout>
-                </ProtectedRoute>
-              } />
+                <Route path="/work-dashboard" element={
+                  <ProtectedRoute>
+                    <AppLayout>
+                      <WorkDashboard />
+                    </AppLayout>
+                  </ProtectedRoute>
+                } />
 
-              <Route path="/synapse" element={
-                <ProtectedRoute>
-                  <AppLayout>
-                    <SynapsePage />
-                  </AppLayout>
-                </ProtectedRoute>
-              } />
+                <Route path="/synapse" element={
+                  <ProtectedRoute>
+                    <AppLayout>
+                      <SynapsePage />
+                    </AppLayout>
+                  </ProtectedRoute>
+                } />
 
-              <Route path="/projects" element={
-                <ProtectedRoute>
-                  <AppLayout>
-                    <Projects />
-                  </AppLayout>
-                </ProtectedRoute>
-              } />
+                <Route path="/projects" element={
+                  <ProtectedRoute>
+                    <AppLayout>
+                      <Projects />
+                    </AppLayout>
+                  </ProtectedRoute>
+                } />
 
-              <Route path="/projects/list" element={
-                <ProtectedRoute>
-                  <AppLayout>
-                    <ProjectsList />
-                  </AppLayout>
-                </ProtectedRoute>
-              } />
+                <Route path="/projects/list" element={
+                  <ProtectedRoute>
+                    <AppLayout>
+                      <ProjectsList />
+                    </AppLayout>
+                  </ProtectedRoute>
+                } />
 
-              <Route path="/projects/:id" element={
-                <ProtectedRoute>
-                  <AppLayout>
-                    <ProjectDetail />
-                  </AppLayout>
-                </ProtectedRoute>
-              } />
+                <Route path="/projects/:id" element={
+                  <ProtectedRoute>
+                    <AppLayout>
+                      <ProjectDetail />
+                    </AppLayout>
+                  </ProtectedRoute>
+                } />
 
-              <Route path="/tasks/:id" element={
-                <ProtectedRoute>
-                  <AppLayout>
-                    <TaskDetail />
-                  </AppLayout>
-                </ProtectedRoute>
-              } />
+                <Route path="/tasks/:id" element={
+                  <ProtectedRoute>
+                    <AppLayout>
+                      <TaskDetail />
+                    </AppLayout>
+                  </ProtectedRoute>
+                } />
 
-              {/* HR Routes */}
-              <Route path="/hr/employees" element={
-                <ProtectedRoute>
-                  <AppLayout>
-                    <Employees />
-                  </AppLayout>
-                </ProtectedRoute>
-              } />
+                {/* HR Routes */}
+                <Route path="/hr/employees" element={
+                  <ProtectedRoute>
+                    <AppLayout>
+                      <Employees />
+                    </AppLayout>
+                  </ProtectedRoute>
+                } />
 
-              <Route path="/hr/employees/:id" element={
-                <ProtectedRoute>
-                  <AppLayout>
-                    <EmployeeDetail />
-                  </AppLayout>
-                </ProtectedRoute>
-              } />
+                <Route path="/hr/employees/:id" element={
+                  <ProtectedRoute>
+                    <AppLayout>
+                      <EmployeeDetail />
+                    </AppLayout>
+                  </ProtectedRoute>
+                } />
 
-              <Route path="/hr/departments" element={
-                <ProtectedRoute>
-                  <AppLayout>
-                    <Departments />
-                  </AppLayout>
-                </ProtectedRoute>
-              } />
+                <Route path="/hr/departments" element={
+                  <ProtectedRoute>
+                    <AppLayout>
+                      <Departments />
+                    </AppLayout>
+                  </ProtectedRoute>
+                } />
 
-              <Route path="/hr/organization" element={
-                <ProtectedRoute>
-                  <AppLayout>
-                    <Organization />
-                  </AppLayout>
-                </ProtectedRoute>
-              } />
+                <Route path="/hr/organization" element={
+                  <ProtectedRoute>
+                    <AppLayout>
+                      <Organization />
+                    </AppLayout>
+                  </ProtectedRoute>
+                } />
 
-              {/* Business Routes */}
-              <Route path="/business/quotes" element={
-                <ProtectedRoute>
-                  <AppLayout>
-                    <Quotes />
-                  </AppLayout>
-                </ProtectedRoute>
-              } />
+                {/* Business Routes */}
+                <Route path="/business/quotes" element={
+                  <ProtectedRoute>
+                    <AppLayout>
+                      <Quotes />
+                    </AppLayout>
+                  </ProtectedRoute>
+                } />
 
-              <Route path="/business/quotes/new" element={
-                <ProtectedRoute>
-                  <AppLayout>
-                    <QuoteForm />
-                  </AppLayout>
-                </ProtectedRoute>
-              } />
+                <Route path="/business/quotes/new" element={
+                  <ProtectedRoute>
+                    <AppLayout>
+                      <QuoteForm />
+                    </AppLayout>
+                  </ProtectedRoute>
+                } />
 
-              <Route path="/business/invoices" element={
-                <ProtectedRoute>
-                  <AppLayout>
-                    <Invoices />
-                  </AppLayout>
-                </ProtectedRoute>
-              } />
+                <Route path="/business/invoices" element={
+                  <ProtectedRoute>
+                    <AppLayout>
+                      <Invoices />
+                    </AppLayout>
+                  </ProtectedRoute>
+                } />
 
-              <Route path="/business/clients" element={
-                <ProtectedRoute>
-                  <AppLayout>
-                    <Clients />
-                  </AppLayout>
-                </ProtectedRoute>
-              } />
+                <Route path="/business/clients" element={
+                  <ProtectedRoute>
+                    <AppLayout>
+                      <Clients />
+                    </AppLayout>
+                  </ProtectedRoute>
+                } />
 
-              {/* Redirect root to dashboard */}
-              <Route path="/" element={<Navigate to="/dashboard" replace />} />
-            </Routes>
+                {/* Redirect root to dashboard */}
+                <Route path="/" element={<Navigate to="/dashboard" replace />} />
+              </Routes>
+            </AIContextProvider>
           </AuthProvider>
         </BrowserRouter>
       </TooltipProvider>

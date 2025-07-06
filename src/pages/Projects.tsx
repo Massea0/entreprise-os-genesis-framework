@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -74,12 +75,19 @@ export default function Projects() {
     });
   };
 
-  const handleTaskUpdate = async (taskId, updates) => {
+  const handleTaskUpdate = async (task) => {
     try {
       const { error } = await supabase
         .from('tasks')
-        .update(updates)
-        .eq('id', taskId);
+        .update({
+          status: task.status,
+          title: task.title,
+          description: task.description,
+          priority: task.priority,
+          due_date: task.due_date,
+          assignee_id: task.assignee_id
+        })
+        .eq('id', task.id);
 
       if (error) throw error;
       
@@ -96,29 +104,10 @@ export default function Projects() {
     }
   };
 
-  const handleTaskCreate = async (taskData) => {
-    try {
-      const { data, error } = await supabase
-        .from('tasks')
-        .insert([taskData])
-        .select()
-        .single();
-
-      if (error) throw error;
-      
-      setTasks([...tasks, data]);
-      toast({
-        title: "Tâche créée",
-        description: "La nouvelle tâche a été créée avec succès"
-      });
-    } catch (error) {
-      console.error('Error creating task:', error);
-      toast({
-        variant: "destructive",
-        title: "Erreur",
-        description: "Erreur lors de la création de la tâche"
-      });
-    }
+  const handleTaskCreate = async () => {
+    // Cette fonction sera appelée sans paramètres par le KanbanBoard
+    // La logique de création sera gérée directement dans le KanbanBoard
+    await loadData(); // Recharger les données après création
   };
 
   const filteredProjects = projects.filter(project =>

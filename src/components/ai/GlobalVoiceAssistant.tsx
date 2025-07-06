@@ -1,29 +1,22 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
-import { useLocation } from 'react-router-dom';
 import { GeminiLiveInterface } from './GeminiLiveInterface';
+import { useAIContext } from './AIContextProvider';
 import { 
-  Mic, 
-  MicOff, 
   Bot, 
-  Loader2,
-  Languages,
-  Sparkles,
   X,
   MessageSquare,
-  Zap
+  Zap,
+  Sparkles,
+  TrendingUp,
+  Users,
+  Briefcase,
+  Target
 } from 'lucide-react';
-
-interface ContextualSuggestion {
-  text: string;
-  action: string;
-  icon: string;
-}
 
 interface GlobalVoiceAssistantProps {
   userId?: string;
@@ -33,71 +26,83 @@ export const GlobalVoiceAssistant: React.FC<GlobalVoiceAssistantProps> = ({
   userId
 }) => {
   const { toast } = useToast();
-  const location = useLocation();
   const [isExpanded, setIsExpanded] = useState(false);
   const [useGeminiLive, setUseGeminiLive] = useState(true);
-  const [contextualSuggestions, setContextualSuggestions] = useState<ContextualSuggestion[]>([]);
   
-  // Générer des suggestions contextuelles basées sur la page actuelle
-  const generateContextualSuggestions = React.useCallback(() => {
-    const path = location.pathname;
-    let suggestions: ContextualSuggestion[] = [];
+  const { 
+    contextualSuggestions, 
+    currentModule, 
+    projects, 
+    employees, 
+    companies, 
+    tasks,
+    isLoading 
+  } = useAIContext();
 
-    switch (true) {
-      case path.includes('/dashboard'):
-        suggestions = [
-          { text: "Analyser les KPIs du mois", action: "dashboard_kpis", icon: "📊" },
-          { text: "Résumé des projets urgents", action: "urgent_projects", icon: "🚨" },
-          { text: "Performance de l'équipe cette semaine", action: "team_performance", icon: "👥" }
-        ];
-        break;
-      case path.includes('/projects'):
-        suggestions = [
-          { text: "Projets en retard", action: "delayed_projects", icon: "⏰" },
-          { text: "Ressources disponibles", action: "available_resources", icon: "👨‍💼" },
-          { text: "Prochaines échéances", action: "upcoming_deadlines", icon: "📅" }
-        ];
-        break;
-      case path.includes('/hr'):
-        suggestions = [
-          { text: "Employés en congé cette semaine", action: "employees_leave", icon: "🏖️" },
-          { text: "Nouveaux recrutements", action: "new_hires", icon: "🆕" },
-          { text: "Évaluations en attente", action: "pending_reviews", icon: "📝" }
-        ];
-        break;
-      case path.includes('/business'):
-        suggestions = [
-          { text: "Devis en attente de validation", action: "pending_quotes", icon: "💰" },
-          { text: "Factures impayées", action: "unpaid_invoices", icon: "💳" },
-          { text: "Nouveaux clients ce mois", action: "new_clients", icon: "🤝" }
-        ];
-        break;
-      default:
-        suggestions = [
-          { text: "Vue d'ensemble de l'entreprise", action: "company_overview", icon: "🏢" },
-          { text: "Alertes importantes", action: "important_alerts", icon: "🔔" },
-          { text: "Recommandations du jour", action: "daily_recommendations", icon: "✨" }
-        ];
+  const getModuleIcon = (module: string) => {
+    switch (module) {
+      case 'hr': return <Users className="h-4 w-4" />;
+      case 'projects': return <Briefcase className="h-4 w-4" />;
+      case 'business': return <Target className="h-4 w-4" />;
+      case 'dashboard': return <TrendingUp className="h-4 w-4" />;
+      default: return <Sparkles className="h-4 w-4" />;
     }
+  };
 
-    setContextualSuggestions(suggestions);
-  }, [location.pathname]);
+  const getContextStats = () => {
+    return {
+      projectsCount: projects.length,
+      employeesCount: employees.length,
+      companiesCount: companies.length,
+      tasksCount: tasks.length,
+      inProgressProjects: projects.filter(p => p.status === 'in_progress').length,
+      pendingTasks: tasks.filter(t => t.status === 'todo').length
+    };
+  };
 
-  useEffect(() => {
-    generateContextualSuggestions();
-  }, [generateContextualSuggestions]);
+  const handleSuggestionClick = async (suggestion: any) => {
+    try {
+      // Ici, nous pourrions déclencher une action spécifique
+      // Pour l'instant, nous affichons juste un toast informatif
+      toast({
+        title: `🤖 Synapse analysera: ${suggestion.text}`,
+        description: `Module: ${suggestion.module} | Action: ${suggestion.action}`
+      });
+    } catch (error) {
+      console.error('Erreur suggestion:', error);
+    }
+  };
+
+  const stats = getContextStats();
 
   return (
     <>
-      {/* Bouton flottant principal */}
+      {/* Bouton flottant principal avec indicateur de contexte */}
       <div className="fixed bottom-6 right-6 z-50">
-        <Button
-          onClick={() => setIsExpanded(!isExpanded)}
-          className="w-14 h-14 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-lg"
-          size="icon"
-        >
-          <Bot className="h-6 w-6 text-white" />
-        </Button>
+        <div className="relative">
+          <Button
+            onClick={() => setIsExpanded(!isExpanded)}
+            className="w-14 h-14 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-lg"
+            size="icon"
+          >
+            <Bot className="h-6 w-6 text-white" />
+          </Button>
+          
+          {/* Indicateur de contexte actif */}
+          <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white flex items-center justify-center">
+            {getModuleIcon(currentModule)}
+          </div>
+          
+          {/* Badge de suggestions disponibles */}
+          {contextualSuggestions.length > 0 && (
+            <Badge 
+              variant="secondary" 
+              className="absolute -top-2 -left-2 bg-orange-500 text-white text-xs px-1 py-0"
+            >
+              {contextualSuggestions.length}
+            </Badge>
+          )}
+        </div>
       </div>
 
       {/* Interface contextuelle expandée */}
@@ -108,6 +113,10 @@ export const GlobalVoiceAssistant: React.FC<GlobalVoiceAssistantProps> = ({
               <div className="flex items-center gap-2">
                 <Sparkles className="h-5 w-5 text-primary" />
                 <CardTitle className="text-lg">Synapse AI</CardTitle>
+                <Badge variant="outline" className="text-xs">
+                  {getModuleIcon(currentModule)}
+                  <span className="ml-1 capitalize">{currentModule}</span>
+                </Badge>
               </div>
               <div className="flex items-center gap-2">
                 <Button
@@ -131,6 +140,27 @@ export const GlobalVoiceAssistant: React.FC<GlobalVoiceAssistantProps> = ({
           </CardHeader>
 
           <CardContent className="space-y-4">
+            {/* Statistiques contextuelles rapides */}
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              <div className="bg-blue-50 p-2 rounded flex items-center gap-1">
+                <Briefcase className="h-3 w-3 text-blue-600" />
+                <span>{stats.projectsCount} projets ({stats.inProgressProjects} actifs)</span>
+              </div>
+              <div className="bg-green-50 p-2 rounded flex items-center gap-1">
+                <Users className="h-3 w-3 text-green-600" />
+                <span>{stats.employeesCount} employés</span>
+              </div>
+              <div className="bg-orange-50 p-2 rounded flex items-center gap-1">
+                <Target className="h-3 w-3 text-orange-600" />
+                <span>{stats.companiesCount} clients</span>
+              </div>
+              <div className="bg-purple-50 p-2 rounded flex items-center gap-1">
+                <MessageSquare className="h-3 w-3 text-purple-600" />
+                <span>{stats.tasksCount} tâches ({stats.pendingTasks} en attente)</span>
+              </div>
+            </div>
+
+            {/* Interface Gemini Live */}
             {useGeminiLive ? (
               <GeminiLiveInterface />
             ) : (
@@ -140,30 +170,33 @@ export const GlobalVoiceAssistant: React.FC<GlobalVoiceAssistantProps> = ({
             )}
 
             {/* Suggestions contextuelles */}
-            <div>
-              <h4 className="text-sm font-medium mb-2 flex items-center gap-1">
-                <MessageSquare className="h-4 w-4" />
-                Suggestions contextuelles
-              </h4>
-              <div className="space-y-2">
-                {contextualSuggestions.map((suggestion, index) => (
-                  <Button
-                    key={index}
-                    variant="outline"
-                    size="sm"
-                    className="w-full justify-start text-left h-auto py-2 px-3"
-                  >
-                    <span className="mr-2">{suggestion.icon}</span>
-                    <span className="text-xs">{suggestion.text}</span>
-                  </Button>
-                ))}
+            {contextualSuggestions.length > 0 && (
+              <div>
+                <h4 className="text-sm font-medium mb-2 flex items-center gap-1">
+                  <MessageSquare className="h-4 w-4" />
+                  Suggestions {currentModule}
+                </h4>
+                <div className="space-y-2 max-h-32 overflow-y-auto">
+                  {contextualSuggestions.map((suggestion, index) => (
+                    <Button
+                      key={index}
+                      variant="outline"
+                      size="sm"
+                      className="w-full justify-start text-left h-auto py-2 px-3 hover:bg-primary/5"
+                      onClick={() => handleSuggestionClick(suggestion)}
+                    >
+                      <span className="mr-2">{suggestion.icon}</span>
+                      <span className="text-xs">{suggestion.text}</span>
+                    </Button>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Instructions */}
-            <div className="text-center text-xs text-muted-foreground">
+            <div className="text-center text-xs text-muted-foreground border-t pt-2">
               {useGeminiLive ? 
-                "Conversation vocale naturelle avec Gemini Live" :
+                "💬 Conversation vocale naturelle • Contexte temps réel activé" :
                 "Assistant vocal classique"
               }
             </div>
