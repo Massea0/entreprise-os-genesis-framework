@@ -58,18 +58,35 @@ export const AIInsightsDashboard: React.FC = () => {
         supabase.from('companies').select('*')
       ]);
 
-      // Simuler des insights IA basés sur les vraies données
+      // Analyser les vraies données pour détecter les retards
+      const now = new Date();
+      const delayedProjects = projectsData.data?.filter(p => {
+        if (p.status !== 'in_progress') return false;
+        if (!p.end_date) return false;
+        return new Date(p.end_date) < now;
+      }) || [];
+
+      const overbudgetProjects = projectsData.data?.filter(p => {
+        if (p.status !== 'in_progress') return false;
+        // Simuler un dépassement si pas de budget défini ou projet ancien
+        return !p.budget || (p.created_at && (now.getTime() - new Date(p.created_at).getTime()) > 90 * 24 * 60 * 60 * 1000);
+      }) || [];
+
       const mockInsights: AIInsight[] = [
         {
           id: '1',
           type: 'alert',
           title: '🚨 Retards Projets Critiques',
-          description: `${projectsData.data?.filter(p => p.status === 'in_progress').length || 0} projets en cours montrent des signes de retard. Recommandation : Recruter 2 développeurs CDD pour rattraper le pic prévu en Q2.`,
-          impact: 'high',
+          description: `${delayedProjects.length} projets en retard détectés. ${overbudgetProjects.length} projets risquent un dépassement budgétaire. Recommandation : Réajuster les plannings et ressources.`,
+          impact: delayedProjects.length > 2 ? 'high' : delayedProjects.length > 0 ? 'medium' : 'low',
           category: 'projects',
           actionable: true,
-          data: { delayedProjects: projectsData.data?.filter(p => p.status === 'in_progress').length || 0 },
-          confidence: 87,
+          data: { 
+            delayedProjects: delayedProjects.length,
+            overbudgetProjects: overbudgetProjects.length,
+            projectNames: delayedProjects.map(p => p.name)
+          },
+          confidence: delayedProjects.length > 0 ? 92 : 65,
           createdAt: new Date().toISOString()
         },
         {
