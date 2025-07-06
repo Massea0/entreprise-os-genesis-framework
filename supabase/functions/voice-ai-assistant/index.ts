@@ -31,10 +31,12 @@ serve(async (req) => {
 
     // Vérifier si c'est une commande Synapse
     const cleanTranscript = transcript.toLowerCase().trim();
-    const isSynapseCommand = cleanTranscript.startsWith('synapse') || 
-                           cleanTranscript.includes('synapse');
+    const isSynapseCommand = cleanTranscript.includes('synapse') || 
+                           context?.suggestions?.some((s: any) => 
+                             cleanTranscript.includes(s.text.toLowerCase())
+                           );
 
-    if (!isSynapseCommand) {
+    if (!isSynapseCommand && !cleanTranscript.startsWith('synapse')) {
       return new Response(
         JSON.stringify({ 
           response: language === 'fr' 
@@ -48,53 +50,83 @@ serve(async (req) => {
     // Extraire la vraie commande après "Synapse"
     const command = cleanTranscript.replace(/^.*synapse\s*/i, '').trim();
 
-    // Récupérer les données contextuelles de l'entreprise
-    const [projectsData, employeesData, companiesData, tasksData] = await Promise.all([
-      supabase.from('projects').select('*').limit(50),
-      supabase.from('employees').select('*').limit(100),
+    // Récupérer les données contextuelles selon le module actuel
+    const [projectsData, employeesData, companiesData, tasksData, devisData, invoicesData] = await Promise.all([
+      supabase.from('projects').select('*').limit(30),
+      supabase.from('employees').select('*').limit(50),
       supabase.from('companies').select('*').limit(20),
-      supabase.from('tasks').select('*').limit(100)
+      supabase.from('tasks').select('*').limit(50),
+      supabase.from('devis').select('*').limit(20),
+      supabase.from('invoices').select('*').limit(20)
     ]);
+
+    // Déterminer le contexte spécifique selon la page
+    let moduleContext = '';
+    if (currentModule?.includes('/dashboard')) {
+      moduleContext = 'Dashboard - Vue d\'ensemble de l\'entreprise';
+    } else if (currentModule?.includes('/projects')) {
+      moduleContext = 'Projets - Gestion des projets et tâches';
+    } else if (currentModule?.includes('/hr')) {
+      moduleContext = 'Ressources Humaines - Gestion des employés';
+    } else if (currentModule?.includes('/business')) {
+      moduleContext = 'Business - Devis, factures et clients';
+    } else {
+      moduleContext = 'Navigation générale';
+    }
 
     const contextData = {
       projects: projectsData.data || [],
       employees: employeesData.data || [],
       companies: companiesData.data || [],
       tasks: tasksData.data || [],
-      currentModule,
-      userLanguage: language
+      devis: devisData.data || [],
+      invoices: invoicesData.data || [],
+      currentModule: moduleContext,
+      userLanguage: language,
+      contextualSuggestions: context?.suggestions || [],
+      timestamp: new Date().toISOString()
     };
 
-    // Construire le prompt pour Gemini
+    // Construire le prompt pour Gemini avec contexte enrichi
     const systemPrompt = `
 Tu es Synapse, l'assistant IA vocal intelligent d'Arcadis Technologies. Tu parles ${language === 'fr' ? 'français' : 'anglais'}.
 
-DONNÉES CONTEXTUELLES ENTREPRISE:
-- Projets actifs: ${contextData.projects.length}
-- Employés: ${contextData.employees.length}  
+CONTEXTE ACTUEL: ${moduleContext}
+
+DONNÉES TEMPS RÉEL:
+- Projets: ${contextData.projects.length} (dont ${contextData.projects.filter(p => p.status === 'in_progress').length} en cours)
+- Employés: ${contextData.employees.length} 
 - Clients: ${contextData.companies.length}
-- Tâches: ${contextData.tasks.length}
+- Tâches: ${contextData.tasks.length} (dont ${contextData.tasks.filter(t => t.status === 'pending').length} en attente)
+- Devis: ${contextData.devis.length} (dont ${contextData.devis.filter(d => d.status === 'pending').length} en attente)
+- Factures: ${contextData.invoices.length} (dont ${contextData.invoices.filter(i => i.status === 'pending').length} impayées)
 
-CAPACITÉS:
-1. Navigation vocale dans l'application
-2. Analyse de données RH, projets, finances
-3. Génération d'insights et recommandations
-4. Réponses en temps réel
+SUGGESTIONS CONTEXTUELLES DISPONIBLES:
+${contextData.contextualSuggestions.map((s: any) => `${s.icon} ${s.text}`).join('\n')}
 
-DONNÉES DISPONIBLES:
+DONNÉES COMPLÈTES:
 ${JSON.stringify(contextData, null, 2)}
+
+CAPACITÉS SYNAPSE:
+1. Navigation contextuelle dans l'application
+2. Analyse de données en temps réel avec insights intelligents
+3. Recommandations basées sur le contexte actuel
+4. Génération de rapports et alertes
+5. Assistance proactive selon la page visitée
 
 INSTRUCTIONS:
 - Réponds de manière conversationnelle et naturelle
-- Sois concis mais informatif
-- Utilise les données réelles pour tes réponses
-- Si tu ne peux pas faire quelque chose, explique pourquoi
+- Utilise les données réelles pour des réponses précises
+- Fournis des insights utiles et actionables
+- Adapte tes réponses au contexte de la page actuelle
+- Sois proactif avec des suggestions pertinentes
 - Reste dans le contexte professionnel d'Arcadis Technologies
 
 COMMANDE UTILISATEUR: "${command}"
+CONTEXTE: ${moduleContext}
 `;
 
-    // Appel à Gemini
+    // Appel à Gemini avec prompt enrichi
     const response = await fetch(
       'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=' + geminiApiKey,
       {
@@ -125,25 +157,40 @@ COMMANDE UTILISATEUR: "${command}"
     const data = await response.json();
     const aiResponse = data.candidates[0].content.parts[0].text;
 
-    // Log de l'interaction
+    // Log de l'interaction avec contexte enrichi
     await supabase.from('ai_tasks_log').insert({
-      task_type: 'voice_assistant',
+      task_type: 'voice_assistant_contextual',
       status: 'completed',
-      input_data: { transcript, command, language, currentModule },
-      output_data: { response: aiResponse, contextUsed: true }
+      input_data: { 
+        transcript, 
+        command, 
+        language, 
+        currentModule,
+        contextualSuggestions: context?.suggestions 
+      },
+      output_data: { 
+        response: aiResponse, 
+        contextUsed: true,
+        moduleContext,
+        dataStats: {
+          projects: contextData.projects.length,
+          employees: contextData.employees.length,
+          companies: contextData.companies.length,
+          tasks: contextData.tasks.length
+        }
+      }
     });
 
-    // Générer un insight si pertinent
+    // Générer un insight contextuel si pertinent
     let insight = null;
-    if (command.includes('projet') || command.includes('project') || 
-        command.includes('équipe') || command.includes('team') ||
-        command.includes('analyse') || command.includes('analysis')) {
+    if (command.length > 0) {
       insight = {
-        type: 'voice_query',
-        module: currentModule,
+        type: 'contextual_voice_query',
+        module: moduleContext,
         query: command,
         timestamp: new Date().toISOString(),
-        language
+        language,
+        suggestionsProvided: context?.suggestions?.length || 0
       };
     }
 
@@ -151,13 +198,16 @@ COMMANDE UTILISATEUR: "${command}"
       JSON.stringify({
         response: aiResponse,
         insight,
-        processed: true
+        processed: true,
+        context: moduleContext
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
   } catch (error) {
     console.error('Erreur voice-ai-assistant:', error);
+    
+    const { language } = await req.json().catch(() => ({ language: 'fr' }));
     
     return new Response(
       JSON.stringify({
