@@ -144,65 +144,54 @@ export const AIContextProvider: React.FC<AIContextProviderProps> = ({ children }
       const userRole = user?.user_metadata?.role || 'client';
       const userCompanyId = user?.user_metadata?.company_id;
 
-      // Adapter les requêtes selon le rôle
-      let projectsPromise, employeesPromise, companiesPromise, tasksPromise, devisPromise, invoicesPromise;
+      let projectsData, employeesData, companiesData, tasksData, devisData, invoicesData;
 
       if (userRole === 'admin' || userRole === 'super_admin') {
         // Admin : accès à toutes les données
-        [projectsPromise, employeesPromise, companiesPromise, tasksPromise, devisPromise, invoicesPromise] = [
-          supabase.from('projects').select('*, companies(name)').limit(100),
-          supabase.from('employees').select('*, departments(name)').limit(200),
+        const results = await Promise.all([
+          supabase.from('projects').select('*').limit(100),
+          supabase.from('employees').select('*').limit(200),
           supabase.from('companies').select('*').limit(50),
-          supabase.from('tasks').select('*, projects(name), employees(first_name, last_name)').limit(500),
-          supabase.from('devis').select('*, companies(name)').limit(100),
-          supabase.from('invoices').select('*, companies(name)').limit(100)
-        ];
+          supabase.from('tasks').select('*').limit(500),
+          supabase.from('devis').select('*').limit(100),
+          supabase.from('invoices').select('*').limit(100)
+        ]);
+        
+        [projectsData, employeesData, companiesData, tasksData, devisData, invoicesData] = results;
       } else if (userRole === 'client') {
         // Client : seulement ses données
-        [projectsPromise, employeesPromise, companiesPromise, tasksPromise, devisPromise, invoicesPromise] = [
-          supabase.from('projects').select('*, companies(name)').eq('client_id', userCompanyId),
-          Promise.resolve({ data: [] }), // Pas d'accès aux employés
+        const results = await Promise.all([
+          supabase.from('projects').select('*').eq('client_company_id', userCompanyId),
+          Promise.resolve({ data: [] }),
           supabase.from('companies').select('*').eq('id', userCompanyId),
-          supabase.from('tasks').select('*, projects(name)').in('project.client_id', [userCompanyId]),
-          supabase.from('devis').select('*, companies(name)').eq('company_id', userCompanyId),
-          supabase.from('invoices').select('*, companies(name)').eq('company_id', userCompanyId)
-        ];
+          supabase.from('tasks').select('*').limit(50),
+          supabase.from('devis').select('*').eq('company_id', userCompanyId),
+          supabase.from('invoices').select('*').eq('company_id', userCompanyId)
+        ]);
+        
+        [projectsData, employeesData, companiesData, tasksData, devisData, invoicesData] = results;
       } else {
-        // Employé : données limitées à son contexte
-        [projectsPromise, employeesPromise, companiesPromise, tasksPromise, devisPromise, invoicesPromise] = [
-          supabase.from('projects').select('*, companies(name)').limit(50),
-          supabase.from('employees').select('*, departments(name)').limit(100),
+        // Employé : données limitées
+        const results = await Promise.all([
+          supabase.from('projects').select('*').limit(50),
+          supabase.from('employees').select('*').limit(100),
           supabase.from('companies').select('*').limit(20),
-          supabase.from('tasks').select('*, projects(name), employees(first_name, last_name)').or(`assignee_id.eq.${user.id},created_by.eq.${user.id}`),
-          Promise.resolve({ data: [] }), // Pas d'accès aux devis
-          Promise.resolve({ data: [] })  // Pas d'accès aux factures
-        ];
+          supabase.from('tasks').select('*').eq('assignee_id', user.id),
+          Promise.resolve({ data: [] }),
+          Promise.resolve({ data: [] })
+        ]);
+        
+        [projectsData, employeesData, companiesData, tasksData, devisData, invoicesData] = results;
       }
 
-      const [
-        projectsResult,
-        employeesResult,
-        companiesResult,
-        tasksResult,
-        devisResult,
-        invoicesResult
-      ] = await Promise.all([
-        projectsPromise,
-        employeesPromise,
-        companiesPromise,
-        tasksPromise,
-        devisPromise,
-        invoicesPromise
-      ]);
-
       const newContextData = {
-        projects: projectsResult.data || [],
-        employees: employeesResult.data || [],
-        companies: companiesResult.data || [],
-        tasks: tasksResult.data || [],
-        devis: devisResult.data || [],
-        invoices: invoicesResult.data || [],
-        insights: contextData.insights // Conserver les insights existants
+        projects: projectsData.data || [],
+        employees: employeesData.data || [],
+        companies: companiesData.data || [],
+        tasks: tasksData.data || [],
+        devis: devisData.data || [],
+        invoices: invoicesData.data || [],
+        insights: contextData.insights
       };
 
       setContextData(newContextData);
