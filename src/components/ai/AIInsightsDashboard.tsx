@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -33,14 +34,57 @@ interface AIInsight {
   data: any;
   confidence: number;
   createdAt: string;
+  actions?: {
+    type: string;
+    module: string;
+    action: string;
+    data?: any;
+  }[];
 }
 
 export const AIInsightsDashboard: React.FC = () => {
   const { toast } = useToast();
+  const location = useLocation();
   const [insights, setInsights] = useState<AIInsight[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [analysisMode, setAnalysisMode] = useState<'global' | 'department'>('global');
+
+  // Déterminer le module actuel
+  const getCurrentModule = (): string => {
+    const path = location.pathname;
+    if (path.includes('/dashboard')) return 'dashboard';
+    if (path.includes('/projects')) return 'projects';
+    if (path.includes('/hr')) return 'hr';
+    if (path.includes('/business')) return 'business';
+    if (path.includes('/synapse')) return 'synapse';
+    return 'general';
+  };
+
+  // Fallback analysis si l'IA ne fonctionne pas
+  const generateBasicInsights = (projects: any[], employees: any[], tasks: any[], companies: any[], devis: any[], invoices: any[]): AIInsight[] => {
+    const now = new Date();
+    const delayedProjects = projects?.filter(p => {
+      if (p.status !== 'in_progress') return false;
+      if (!p.end_date) return false;
+      return new Date(p.end_date) < now;
+    }) || [];
+
+    return [
+      {
+        id: '1',
+        type: 'alert',
+        title: '📊 Analyse Rapide',
+        description: `${delayedProjects.length} projets en retard, ${employees?.length || 0} employés, ${companies?.length || 0} clients actifs.`,
+        impact: delayedProjects.length > 2 ? 'high' : 'medium',
+        category: 'projects',
+        actionable: true,
+        data: { delayedProjects: delayedProjects.length },
+        confidence: 75,
+        createdAt: new Date().toISOString()
+      }
+    ];
+  };
 
   useEffect(() => {
     generateAIInsights();
@@ -51,115 +95,35 @@ export const AIInsightsDashboard: React.FC = () => {
       setLoading(true);
       
       // Récupérer toutes les données de l'entreprise
-      const [projectsData, employeesData, tasksData, companiesData] = await Promise.all([
+      const [projectsData, employeesData, tasksData, companiesData, devisData, invoicesData] = await Promise.all([
         supabase.from('projects').select('*'),
         supabase.from('employees').select('*'),
         supabase.from('tasks').select('*'), 
-        supabase.from('companies').select('*')
+        supabase.from('companies').select('*'),
+        supabase.from('devis').select('*'),
+        supabase.from('invoices').select('*')
       ]);
 
-      // Analyser les vraies données pour détecter les retards
-      const now = new Date();
-      const delayedProjects = projectsData.data?.filter(p => {
-        if (p.status !== 'in_progress') return false;
-        if (!p.end_date) return false;
-        return new Date(p.end_date) < now;
-      }) || [];
-
-      const overbudgetProjects = projectsData.data?.filter(p => {
-        if (p.status !== 'in_progress') return false;
-        // Simuler un dépassement si pas de budget défini ou projet ancien
-        return !p.budget || (p.created_at && (now.getTime() - new Date(p.created_at).getTime()) > 90 * 24 * 60 * 60 * 1000);
-      }) || [];
-
-      const mockInsights: AIInsight[] = [
-        {
-          id: '1',
-          type: 'alert',
-          title: '🚨 Retards Projets Critiques',
-          description: `${delayedProjects.length} projets en retard détectés. ${overbudgetProjects.length} projets risquent un dépassement budgétaire. Recommandation : Réajuster les plannings et ressources.`,
-          impact: delayedProjects.length > 2 ? 'high' : delayedProjects.length > 0 ? 'medium' : 'low',
-          category: 'projects',
-          actionable: true,
-          data: { 
-            delayedProjects: delayedProjects.length,
-            overbudgetProjects: overbudgetProjects.length,
-            projectNames: delayedProjects.map(p => p.name)
-          },
-          confidence: delayedProjects.length > 0 ? 92 : 65,
-          createdAt: new Date().toISOString()
-        },
-        // Analyse RH basée sur les vraies données
-        {
-          id: '2', 
-          type: 'recommendation',
-          title: '💡 Optimisation Équipe RH',
-          description: `${employeesData.data?.length || 0} employés actuels. Ratio projets/employés: ${projectsData.data?.length || 0}/${employeesData.data?.length || 1} = ${Math.round((projectsData.data?.length || 0) / (employeesData.data?.length || 1) * 100) / 100}. ${(projectsData.data?.length || 0) > (employeesData.data?.length || 0) ? 'Charge élevée détectée' : 'Capacité disponible'}.`,
-          impact: (projectsData.data?.length || 0) > (employeesData.data?.length || 0) * 1.5 ? 'high' : 'medium',
-          category: 'hr',
-          actionable: true,
-          data: { 
-            currentEmployees: employeesData.data?.length || 0, 
-            activeProjects: projectsData.data?.length || 0,
-            workloadRatio: (projectsData.data?.length || 0) / (employeesData.data?.length || 1)
-          },
-          confidence: 85,
-          createdAt: new Date().toISOString()
-        },
-        // Analyse des tâches en cours
-        {
-          id: '3',
-          type: 'prediction',
-          title: '📈 Analyse Productivité',
-          description: `${tasksData.data?.filter(t => t.status === 'done').length || 0} tâches terminées vs ${tasksData.data?.filter(t => t.status === 'in_progress').length || 0} en cours. Taux de completion: ${Math.round(((tasksData.data?.filter(t => t.status === 'done').length || 0) / (tasksData.data?.length || 1)) * 100)}%.`,
-          impact: ((tasksData.data?.filter(t => t.status === 'done').length || 0) / (tasksData.data?.length || 1)) > 0.7 ? 'low' : 'medium',
-          category: 'performance',
-          actionable: true,
-          data: { 
-            completedTasks: tasksData.data?.filter(t => t.status === 'done').length || 0,
-            inProgressTasks: tasksData.data?.filter(t => t.status === 'in_progress').length || 0,
-            completionRate: ((tasksData.data?.filter(t => t.status === 'done').length || 0) / (tasksData.data?.length || 1)) * 100
-          },
-          confidence: 82,
-          createdAt: new Date().toISOString()
-        },
-        // Analyse business réelle
-        {
-          id: '4',
-          type: 'analysis',
-          title: '🎯 Opportunité Business',
-          description: `${companiesData.data?.length || 0} clients actifs. ${projectsData.data?.filter(p => p.status === 'completed').length || 0} projets livrés avec succès. Taux de rétention client élevé détecté.`,
-          impact: (companiesData.data?.length || 0) > 5 ? 'high' : 'medium',
-          category: 'business',
-          actionable: true,
-          data: { 
-            clients: companiesData.data?.length || 0, 
-            completedProjects: projectsData.data?.filter(p => p.status === 'completed').length || 0,
-            retentionIndicator: (projectsData.data?.filter(p => p.status === 'completed').length || 0) / (companiesData.data?.length || 1)
-          },
-          confidence: 78,
-          createdAt: new Date().toISOString()
-        },
-        // Analyse des blocages réels
-        {
-          id: '5',
-          type: 'alert',
-          title: '⏰ Analyse des Tâches',
-          description: `${tasksData.data?.filter(t => t.status === 'in_progress').length || 0} tâches en cours, ${tasksData.data?.filter(t => t.status === 'blocked').length || 0} bloquées. ${tasksData.data?.filter(t => !t.assignee_id).length || 0} tâches non assignées nécessitent attention.`,
-          impact: (tasksData.data?.filter(t => t.status === 'blocked').length || 0) > 3 ? 'high' : 'medium',
-          category: 'projects',
-          actionable: true,
-          data: { 
-            inProgressTasks: tasksData.data?.filter(t => t.status === 'in_progress').length || 0,
-            blockedTasks: tasksData.data?.filter(t => t.status === 'blocked').length || 0,
-            unassignedTasks: tasksData.data?.filter(t => !t.assignee_id).length || 0
-          },
-          confidence: 89,
-          createdAt: new Date().toISOString()
+      // Appeler l'IA pour analyser intelligemment toutes les données
+      const { data: aiAnalysis, error } = await supabase.functions.invoke('ai-business-analyzer', {
+        body: {
+          projects: projectsData.data || [],
+          employees: employeesData.data || [],
+          tasks: tasksData.data || [],
+          companies: companiesData.data || [],
+          devis: devisData.data || [],
+          invoices: invoicesData.data || [],
+          currentModule: getCurrentModule()
         }
-      ];
+      });
 
-      setInsights(mockInsights);
+      if (error) {
+        console.error('Erreur analyse IA:', error);
+        // Fallback vers analyse basique si l'IA échoue
+        setInsights(generateBasicInsights(projectsData.data || [], employeesData.data || [], tasksData.data || [], companiesData.data || [], devisData.data || [], invoicesData.data || []));
+      } else {
+        setInsights(aiAnalysis.insights || []);
+      }
     } catch (error) {
       console.error('Erreur génération insights:', error);
       toast({
@@ -330,7 +294,17 @@ export const AIInsightsDashboard: React.FC = () => {
                       </div>
                     </div>
                   </div>
-                  {insight.actionable && (
+                  {insight.actionable && insight.actions && insight.actions.length > 0 && (
+                    <div className="mt-2 space-y-1">
+                      {insight.actions.map((action, idx) => (
+                        <Button key={idx} size="sm" variant="outline" className="mr-2 mb-1">
+                          <Zap className="h-4 w-4 mr-2" />
+                          {action.action}
+                        </Button>
+                      ))}
+                    </div>
+                  )}
+                  {insight.actionable && (!insight.actions || insight.actions.length === 0) && (
                     <Button size="sm" variant="outline">
                       <Zap className="h-4 w-4 mr-2" />
                       Action

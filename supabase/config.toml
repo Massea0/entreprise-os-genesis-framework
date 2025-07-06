@@ -84,4 +84,7 @@ verify_jwt = true
 verify_jwt = true
 
 [functions.task-mermaid-generator]
-verify_jwt = true
+verify_jwt = false
+
+[functions.ai-business-analyzer]
+verify_jwt = false
