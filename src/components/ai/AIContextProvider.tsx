@@ -52,7 +52,13 @@ export const AIContextProvider: React.FC<AIContextProviderProps> = ({ children }
   // Déterminer le module actuel
   const getCurrentModule = (): string => {
     const path = location.pathname;
-    if (path.includes('/dashboard')) return 'dashboard';
+    const userRole = user?.user_metadata?.role || 'client';
+    
+    if (path.includes('/dashboard')) {
+      if (userRole === 'admin' || userRole === 'super_admin') return 'admin-dashboard';
+      if (userRole === 'client') return 'client-dashboard';
+      return 'dashboard';
+    }
     if (path.includes('/projects')) return 'projects';
     if (path.includes('/hr')) return 'hr';
     if (path.includes('/business')) return 'business';
@@ -144,6 +150,11 @@ export const AIContextProvider: React.FC<AIContextProviderProps> = ({ children }
       const userRole = user?.user_metadata?.role || 'client';
       const userCompanyId = user?.user_metadata?.company_id;
 
+      // Debug: log les valeurs pour identifier le problème
+      console.log('AIContextProvider - User role:', userRole);
+      console.log('AIContextProvider - User company ID:', userCompanyId);
+      console.log('AIContextProvider - User ID:', user.id);
+
       let projectsData, employeesData, companiesData, tasksData, devisData, invoicesData;
 
       if (userRole === 'admin' || userRole === 'super_admin') {
@@ -158,8 +169,8 @@ export const AIContextProvider: React.FC<AIContextProviderProps> = ({ children }
         ]);
         
         [projectsData, employeesData, companiesData, tasksData, devisData, invoicesData] = results;
-      } else if (userRole === 'client') {
-        // Client : seulement ses données
+      } else if (userRole === 'client' && userCompanyId) {
+        // Client : seulement ses données (uniquement si company_id existe)
         const results = await Promise.all([
           supabase.from('projects').select('*').eq('client_company_id', userCompanyId),
           Promise.resolve({ data: [] }),
@@ -170,6 +181,12 @@ export const AIContextProvider: React.FC<AIContextProviderProps> = ({ children }
         ]);
         
         [projectsData, employeesData, companiesData, tasksData, devisData, invoicesData] = results;
+      } else if (userRole === 'client' && !userCompanyId) {
+        // Client sans company_id : données vides pour éviter les erreurs
+        console.warn('Client user without company_id, returning empty data');
+        [projectsData, employeesData, companiesData, tasksData, devisData, invoicesData] = [
+          { data: [] }, { data: [] }, { data: [] }, { data: [] }, { data: [] }, { data: [] }
+        ];
       } else {
         // Employé : données limitées
         const results = await Promise.all([
