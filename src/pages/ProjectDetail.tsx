@@ -78,32 +78,85 @@ export default function ProjectDetail() {
     try {
       setLoading(true);
       
-      const [projectResponse, tasksResponse] = await Promise.all([
-        supabase
-          .from('projects')
-          .select(`
-            *,
-            owner:employees!projects_owner_id_fkey(first_name, last_name),
-            client_company:companies(name)
-          `)
-          .eq('id', id)
-          .single(),
-        
-        supabase
-          .from('tasks')
-          .select(`
-            *,
-            assignee:employees!tasks_assignee_id_fkey(first_name, last_name)
-          `)
-          .eq('project_id', id)
-          .order('position')
-      ]);
+      // Charger le projet avec les relations
+      const { data: projectData, error: projectError } = await supabase
+        .from('projects')
+        .select(`
+          *,
+          client_company:companies(name)
+        `)
+        .eq('id', id)
+        .single();
 
-      if (projectResponse.error) throw projectResponse.error;
-      if (tasksResponse.error) throw tasksResponse.error;
-      
-      setProject(projectResponse.data);
-      setTasks(tasksResponse.data || []);
+      if (projectError) throw projectError;
+
+      // Charger séparément l'owner s'il existe
+      let ownerData = null;
+      if (projectData.owner_id) {
+        const { data: userData } = await supabase
+          .from('users')
+          .select('id')
+          .eq('id', projectData.owner_id)
+          .single();
+        
+        if (userData) {
+          const { data: employeeData } = await supabase
+            .from('employees')
+            .select('first_name, last_name')
+            .eq('user_id', userData.id)
+            .single();
+          
+          if (employeeData) {
+            ownerData = employeeData;
+          }
+        }
+      }
+
+      // Charger les tâches
+      const { data: tasksData, error: tasksError } = await supabase
+        .from('tasks')
+        .select('*')
+        .eq('project_id', id)
+        .order('position');
+
+      if (tasksError) throw tasksError;
+
+      // Charger les assignees pour chaque tâche
+      const tasksWithAssignees = await Promise.all(
+        (tasksData || []).map(async (task) => {
+          let assigneeData = null;
+          if (task.assignee_id) {
+            const { data: userData } = await supabase
+              .from('users')
+              .select('id')
+              .eq('id', task.assignee_id)
+              .single();
+            
+            if (userData) {
+              const { data: employeeData } = await supabase
+                .from('employees')
+                .select('first_name, last_name')
+                .eq('user_id', userData.id)
+                .single();
+              
+              if (employeeData) {
+                assigneeData = employeeData;
+              }
+            }
+          }
+          
+          return {
+            ...task,
+            assignee: assigneeData
+          };
+        })
+      );
+
+      setProject({
+        ...projectData,
+        owner: ownerData
+      });
+      setTasks(tasksWithAssignees || []);
 
     } catch (error) {
       console.error('Error loading project:', error);
