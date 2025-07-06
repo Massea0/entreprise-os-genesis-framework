@@ -75,141 +75,121 @@ export const SynapseInsights: React.FC<SynapseInsightsProps> = ({
   };
 
   const generateContextualInsights = async (context: string, entityId?: string, entityType?: string): Promise<SynapseInsight[]> => {
-    // Simuler l'analyse IA contextuelle
+    // Générer des insights basés sur les vraies données
     const baseInsights: SynapseInsight[] = [];
 
-    switch (context) {
-      case 'dashboard':
-        baseInsights.push(
-          {
-            id: '1',
-            type: 'success',
-            category: 'Performance',
-            title: '📊 Productivité en hausse',
-            description: 'Vos équipes affichent une amélioration de 23% cette semaine',
-            confidence: 0.94,
-            impact: 'high',
-            priority: 1,
-            action: 'Voir détails performance'
-          },
-          {
-            id: '2',
-            type: 'warning',
-            category: 'Planification',
-            title: '⚠️ Goulot d\'étranglement détecté',
-            description: '3 projets risquent un retard si les ressources ne sont pas réallouées',
-            confidence: 0.87,
-            impact: 'medium',
-            priority: 2,
-            action: 'Optimiser ressources'
-          },
-          {
-            id: '3',
-            type: 'info',
-            category: 'Innovation',
-            title: '💡 Opportunité d\'automatisation',
-            description: 'IA peut réduire 40% du temps des tâches répétitives identifiées',
-            confidence: 0.91,
-            impact: 'high',
-            priority: 1,
-            action: 'Explorer automatisation'
-          }
-        );
-        break;
+    try {
+      // Récupérer les données contextuelles réelles
+      const [projectsRes, tasksRes, employeesRes, devisRes, invoicesRes] = await Promise.all([
+        supabase.from('projects').select('*').limit(20),
+        supabase.from('tasks').select('*').limit(50),
+        supabase.from('employees').select('*').limit(30),
+        supabase.from('devis').select('*').limit(20),
+        supabase.from('invoices').select('*').limit(20)
+      ]);
 
-      case 'projects':
-        baseInsights.push(
-          {
-            id: '1',
-            type: 'critical',
-            category: 'Risque',
-            title: '🚨 Projet à risque critique',
-            description: 'Le projet Alpha montre 3 indicateurs de risque majeurs',
-            confidence: 0.96,
-            impact: 'high',
-            priority: 1,
-            action: 'Intervention immédiate'
-          },
-          {
-            id: '2',
-            type: 'success',
-            category: 'Optimisation',
-            title: '🎯 Réallocation optimale suggérée',
-            description: 'Transfert de 2 développeurs vers Beta augmenterait l\'efficacité de 35%',
-            confidence: 0.89,
-            impact: 'medium',
-            priority: 2,
-            action: 'Appliquer suggestion'
-          }
-        );
-        break;
+      const projects = projectsRes.data || [];
+      const tasks = tasksRes.data || [];
+      const employees = employeesRes.data || [];
+      const devis = devisRes.data || [];
+      const invoices = invoicesRes.data || [];
 
-      case 'hr':
-        baseInsights.push(
-          {
-            id: '1',
-            type: 'info',
-            category: 'Talent',
-            title: '⭐ Talents émergents identifiés',
-            description: '4 employés montrent un potentiel de leadership élevé',
-            confidence: 0.92,
-            impact: 'high',
-            priority: 1,
-            action: 'Planifier développement'
-          },
-          {
-            id: '2',
-            type: 'warning',
-            category: 'Rétention',
-            title: '📉 Risque de départ élevé',
-            description: '2 employés clés présentent des signaux de désengagement',
-            confidence: 0.85,
-            impact: 'high',
-            priority: 1,
-            action: 'Entretien de rétention'
-          }
-        );
-        break;
+      switch (context) {
+        case 'dashboard':
+        case 'admin-dashboard':
+          const activeProjects = projects.filter(p => p.status === 'in_progress');
+          const completedTasks = tasks.filter(t => t.status === 'done');
+          const totalRevenue = invoices.filter(i => i.status === 'paid').reduce((sum, i) => sum + (i.amount || 0), 0);
+          
+          baseInsights.push(
+            {
+              id: '1',
+              type: 'success',
+              category: 'Performance',
+              title: `🚀 ${activeProjects.length} projets actifs`,
+              description: `${completedTasks.length} tâches terminées récemment. Excellente dynamique !`,
+              confidence: 0.95,
+              impact: 'high',
+              priority: 1,
+              action: 'Voir détails projets'
+            },
+            {
+              id: '2',
+              type: 'info',
+              category: 'Finance',
+              title: `💰 CA: ${new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'XOF', minimumFractionDigits: 0 }).format(totalRevenue)}`,
+              description: `${invoices.filter(i => i.status === 'sent').length} factures en attente de paiement`,
+              confidence: 0.98,
+              impact: 'medium',
+              priority: 2,
+              action: 'Analyser finances'
+            }
+          );
 
-      case 'support':
-        baseInsights.push(
-          {
-            id: '1',
-            type: 'success',
-            category: 'Performance',
-            title: '🚀 Résolution ultra-rapide',
-            description: 'Temps de résolution amélioré de 45% grâce à l\'IA',
-            confidence: 0.97,
-            impact: 'high',
-            priority: 1
-          },
-          {
-            id: '2',
-            type: 'info',
-            category: 'Prédiction',
-            title: '🔮 Pic de demandes prévu',
-            description: 'Augmentation de 60% des tickets prévue cette semaine',
-            confidence: 0.88,
-            impact: 'medium',
-            priority: 2,
-            action: 'Pré-positionner agents'
+          if (activeProjects.length > 5) {
+            baseInsights.push({
+              id: '3',
+              type: 'warning',
+              category: 'Charge',
+              title: '⚠️ Charge élevée détectée',
+              description: `${activeProjects.length} projets simultanés. Surveiller la capacité équipe`,
+              confidence: 0.88,
+              impact: 'medium',
+              priority: 2,
+              action: 'Équilibrer charge'
+            });
           }
-        );
-        break;
+          break;
 
-      default:
-        baseInsights.push(
-          {
-            id: '1',
-            type: 'info',
-            category: 'IA',
-            title: '🧠 Synapse activé',
-            description: 'Intelligence artificielle prête à vous assister',
-            confidence: 1.0,
-            impact: 'medium',
-            priority: 3
+        case 'client-dashboard':
+          const clientProjects = projects.length;
+          const clientInvoices = invoices.length;
+          const overdueInvoices = invoices.filter(i => 
+            i.status === 'sent' && new Date(i.due_date) < new Date()
+          );
+          
+          baseInsights.push(
+            {
+              id: '1',
+              type: 'info',
+              category: 'Projets',
+              title: `📊 ${clientProjects} projets en portefeuille`,
+              description: 'Suivi détaillé de vos investissements technologiques',
+              confidence: 1.0,
+              impact: 'medium',
+              priority: 2,
+              action: 'Consulter projets'
+            }
+          );
+
+          if (overdueInvoices.length > 0) {
+            baseInsights.push({
+              id: '2',
+              type: 'warning',
+              category: 'Paiements',
+              title: `🔔 ${overdueInvoices.length} facture(s) en retard`,
+              description: 'Des paiements nécessitent votre attention',
+              confidence: 1.0,
+              impact: 'high',
+              priority: 1,
+              action: 'Régler factures'
+            });
           }
-        );
+          break;
+      }
+    } catch (error) {
+      console.error('Erreur lors de la génération des insights:', error);
+      // Fallback avec des insights par défaut
+      baseInsights.push({
+        id: '1',
+        type: 'info',
+        category: 'IA',
+        title: '🧠 Synapse activé',
+        description: 'Intelligence artificielle prête à vous assister',
+        confidence: 1.0,
+        impact: 'medium',
+        priority: 3
+      });
     }
 
     return baseInsights;

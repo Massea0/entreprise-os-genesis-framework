@@ -60,56 +60,124 @@ export const AIContextProvider: React.FC<AIContextProviderProps> = ({ children }
     return 'general';
   };
 
-  // Générer des suggestions contextuelles
+  // Générer des suggestions contextuelles basées sur les vraies données
   const generateContextualSuggestions = (module: string, data: any): ContextualSuggestion[] => {
     const suggestions: ContextualSuggestion[] = [];
 
     switch (module) {
       case 'dashboard':
+      case 'admin-dashboard':
+        const totalProjects = data.projects?.length || 0;
+        const activeProjects = data.projects?.filter(p => p.status === 'in_progress').length || 0;
+        const totalRevenue = data.invoices?.filter(i => i.status === 'paid').reduce((sum, i) => sum + (i.amount || 0), 0) || 0;
+        
         suggestions.push(
-          { text: "Analyser les KPIs du mois", action: "analyze_kpis", icon: "📊", module },
-          { text: "Résumé des projets urgents", action: "urgent_projects", icon: "🚨", module },
-          { text: "Performance équipe cette semaine", action: "team_performance", icon: "👥", module }
+          { text: `Analyser ${totalProjects} projets (${activeProjects} actifs)`, action: "analyze_projects", icon: "📊", module },
+          { text: `CA réalisé: ${new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'XOF', minimumFractionDigits: 0 }).format(totalRevenue)}`, action: "revenue_analysis", icon: "💰", module },
+          { text: "Prédire performances Q2", action: "predict_performance", icon: "🔮", module }
+        );
+        break;
+
+      case 'client-dashboard':
+        const clientInvoices = data.invoices?.length || 0;
+        const clientQuotes = data.devis?.length || 0;
+        const clientProjects = data.projects?.length || 0;
+        
+        suggestions.push(
+          { text: `${clientInvoices} factures à suivre`, action: "review_invoices", icon: "📋", module },
+          { text: `${clientQuotes} devis reçus`, action: "review_quotes", icon: "💼", module },
+          { text: `${clientProjects} projets en cours`, action: "track_projects", icon: "🚀", module }
         );
         break;
 
       case 'projects':
-        const delayedProjects = data.projects?.filter(p => p.status === 'in_progress').length || 0;
+        const delayedProjects = data.projects?.filter(p => p.status === 'in_progress' && new Date(p.end_date) < new Date()).length || 0;
+        const totalTasks = data.tasks?.length || 0;
+        const pendingTasks = data.tasks?.filter(t => t.status === 'todo').length || 0;
+        
         suggestions.push(
-          { text: `${delayedProjects} projets nécessitent attention`, action: "analyze_delays", icon: "⏰", module },
-          { text: "Optimiser allocation ressources", action: "optimize_resources", icon: "👨‍💼", module },
-          { text: "Prédire les échéances", action: "predict_deadlines", icon: "📅", module }
+          { text: `${delayedProjects} projets en retard`, action: "analyze_delays", icon: "⚠️", module },
+          { text: `${pendingTasks}/${totalTasks} tâches en attente`, action: "optimize_tasks", icon: "✅", module },
+          { text: "Réorganiser les priorités", action: "reorganize_priorities", icon: "📈", module }
         );
         break;
 
       case 'hr':
         const totalEmployees = data.employees?.length || 0;
+        const activeEmployees = data.employees?.filter(e => e.employment_status === 'active').length || 0;
+        
         suggestions.push(
-          { text: `Analyser ${totalEmployees} profils employés`, action: "analyze_employees", icon: "👥", module },
-          { text: "Détecter besoins recrutement", action: "recruitment_needs", icon: "🆕", module },
-          { text: "Évaluer satisfaction équipe", action: "team_satisfaction", icon: "😊", module }
+          { text: `${activeEmployees}/${totalEmployees} employés actifs`, action: "analyze_workforce", icon: "👥", module },
+          { text: "Évaluer charge de travail", action: "workload_analysis", icon: "⚖️", module },
+          { text: "Identifier talents émergents", action: "talent_detection", icon: "⭐", module }
         );
         break;
 
       case 'business':
-        const pendingQuotes = data.devis?.filter(d => d.status === 'pending').length || 0;
+        const pendingQuotes = data.devis?.filter(d => d.status === 'sent' || d.status === 'pending').length || 0;
+        const paidInvoices = data.invoices?.filter(i => i.status === 'paid').length || 0;
+        const totalAmount = data.invoices?.reduce((sum, i) => sum + (i.amount || 0), 0) || 0;
+        
         suggestions.push(
-          { text: `${pendingQuotes} devis en attente`, action: "review_quotes", icon: "💰", module },
-          { text: "Analyser taux conversion", action: "conversion_analysis", icon: "📈", module },
-          { text: "Prédire revenus Q2", action: "revenue_prediction", icon: "💎", module }
+          { text: `${pendingQuotes} devis à suivre`, action: "follow_quotes", icon: "📝", module },
+          { text: `${paidInvoices} factures payées`, action: "payment_analysis", icon: "✅", module },
+          { text: `CA total: ${new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'XOF', minimumFractionDigits: 0 }).format(totalAmount)}`, action: "revenue_breakdown", icon: "💎", module }
         );
         break;
+
+      default:
+        suggestions.push(
+          { text: "Analyser l'activité globale", action: "global_analysis", icon: "🌍", module },
+          { text: "Suggestions personnalisées", action: "personalized_insights", icon: "🎯", module }
+        );
     }
 
     return suggestions;
   };
 
-  // Charger toutes les données contextuelles
+  // Charger toutes les données contextuelles selon le rôle utilisateur
   const refreshContext = async () => {
     if (!user) return;
 
     try {
       setIsLoading(true);
+      const userRole = user?.user_metadata?.role || 'client';
+      const userCompanyId = user?.user_metadata?.company_id;
+
+      // Adapter les requêtes selon le rôle
+      let projectsPromise, employeesPromise, companiesPromise, tasksPromise, devisPromise, invoicesPromise;
+
+      if (userRole === 'admin' || userRole === 'super_admin') {
+        // Admin : accès à toutes les données
+        [projectsPromise, employeesPromise, companiesPromise, tasksPromise, devisPromise, invoicesPromise] = [
+          supabase.from('projects').select('*, companies(name)').limit(100),
+          supabase.from('employees').select('*, departments(name)').limit(200),
+          supabase.from('companies').select('*').limit(50),
+          supabase.from('tasks').select('*, projects(name), employees(first_name, last_name)').limit(500),
+          supabase.from('devis').select('*, companies(name)').limit(100),
+          supabase.from('invoices').select('*, companies(name)').limit(100)
+        ];
+      } else if (userRole === 'client') {
+        // Client : seulement ses données
+        [projectsPromise, employeesPromise, companiesPromise, tasksPromise, devisPromise, invoicesPromise] = [
+          supabase.from('projects').select('*, companies(name)').eq('client_id', userCompanyId),
+          Promise.resolve({ data: [] }), // Pas d'accès aux employés
+          supabase.from('companies').select('*').eq('id', userCompanyId),
+          supabase.from('tasks').select('*, projects(name)').in('project.client_id', [userCompanyId]),
+          supabase.from('devis').select('*, companies(name)').eq('company_id', userCompanyId),
+          supabase.from('invoices').select('*, companies(name)').eq('company_id', userCompanyId)
+        ];
+      } else {
+        // Employé : données limitées à son contexte
+        [projectsPromise, employeesPromise, companiesPromise, tasksPromise, devisPromise, invoicesPromise] = [
+          supabase.from('projects').select('*, companies(name)').limit(50),
+          supabase.from('employees').select('*, departments(name)').limit(100),
+          supabase.from('companies').select('*').limit(20),
+          supabase.from('tasks').select('*, projects(name), employees(first_name, last_name)').or(`assignee_id.eq.${user.id},created_by.eq.${user.id}`),
+          Promise.resolve({ data: [] }), // Pas d'accès aux devis
+          Promise.resolve({ data: [] })  // Pas d'accès aux factures
+        ];
+      }
 
       const [
         projectsResult,
@@ -119,12 +187,12 @@ export const AIContextProvider: React.FC<AIContextProviderProps> = ({ children }
         devisResult,
         invoicesResult
       ] = await Promise.all([
-        supabase.from('projects').select('*'),
-        supabase.from('employees').select('*'),
-        supabase.from('companies').select('*'),
-        supabase.from('tasks').select('*'),
-        supabase.from('devis').select('*'),
-        supabase.from('invoices').select('*')
+        projectsPromise,
+        employeesPromise,
+        companiesPromise,
+        tasksPromise,
+        devisPromise,
+        invoicesPromise
       ]);
 
       const newContextData = {

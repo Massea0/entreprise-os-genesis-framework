@@ -2,7 +2,7 @@
 import { SidebarProvider } from '@/components/ui/sidebar';
 import { AppSidebar } from './AppSidebar';
 import { Header } from './Header';
-import { GlobalVoiceAssistant } from '@/components/ai/GlobalVoiceAssistant';
+import { EnhancedGlobalVoiceAssistant } from '@/components/ai/EnhancedGlobalVoiceAssistant';
 import { useAuth } from '@/contexts/AuthContext';
 
 interface AppLayoutProps {
@@ -24,7 +24,7 @@ export function AppLayout({ children }: AppLayoutProps) {
         </div>
         
         {/* Assistant vocal global */}
-        <GlobalVoiceAssistant userId={user?.id} />
+        <EnhancedGlobalVoiceAssistant userId={user?.id} />
       </div>
     </SidebarProvider>
   );
