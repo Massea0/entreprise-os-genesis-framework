@@ -31,6 +31,7 @@ import Clients from "./pages/business/Clients";
 import SynapsePage from "./pages/SynapsePage";
 import SupportAdmin from "./pages/admin/SupportAdmin";
 import AdminDashboard from "./pages/admin/AdminDashboard";
+import Settings from "./pages/Settings";
 
 const queryClient = new QueryClient();
 
@@ -212,6 +213,15 @@ function App() {
                         <h1 className="text-2xl font-bold mb-4">Base de connaissances</h1>
                         <p className="text-muted-foreground">Cette section sera bientôt disponible.</p>
                       </div>
+                    </AppLayout>
+                  </ProtectedRoute>
+                } />
+
+                {/* Settings Route */}
+                <Route path="/settings" element={
+                  <ProtectedRoute>
+                    <AppLayout>
+                      <Settings />
                     </AppLayout>
                   </ProtectedRoute>
                 } />
