@@ -54,7 +54,7 @@ export default function Register() {
         title: "Inscription réussie",
         description: "Vérifiez votre email pour activer votre compte"
       });
-      navigate('/auth/login');
+      navigate('/login');
     }
 
     setLoading(false);
@@ -156,7 +156,7 @@ export default function Register() {
           <div className="text-center">
             <p className="text-sm text-muted-foreground">
               Déjà un compte ?{' '}
-              <Link to="/auth/login" className="text-primary hover:underline">
+              <Link to="/login" className="text-primary hover:underline">
                 Se connecter
               </Link>
             </p>

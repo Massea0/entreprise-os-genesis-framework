@@ -43,7 +43,7 @@ interface Notification {
   id: string;
   title: string;
   message: string;
-  severity: 'low' | 'medium' | 'high' | 'critical';
+  severity: string;
   notification_type: string;
   created_at: string;
   is_read: boolean;

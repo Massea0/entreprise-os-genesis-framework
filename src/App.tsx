@@ -28,6 +28,7 @@ import QuoteForm from "./pages/business/QuoteForm";
 import Invoices from "./pages/business/Invoices";
 import Clients from "./pages/business/Clients";
 import SynapsePage from "./pages/SynapsePage";
+import SupportAdmin from "./pages/admin/SupportAdmin";
 
 const queryClient = new QueryClient();
 
@@ -176,8 +177,17 @@ function App() {
                   </ProtectedRoute>
                 } />
 
-                {/* Redirect root to dashboard */}
-                <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                {/* Support/Admin Routes */}
+                <Route path="/admin/support" element={
+                  <ProtectedRoute>
+                    <AppLayout>
+                      <SupportAdmin />
+                    </AppLayout>
+                  </ProtectedRoute>
+                } />
+
+                {/* Redirect unmatched routes to dashboard */}
+                <Route path="*" element={<Navigate to="/dashboard" replace />} />
               </Routes>
             </AIContextProvider>
           </AuthProvider>

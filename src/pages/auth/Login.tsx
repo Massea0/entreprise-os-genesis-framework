@@ -94,7 +94,7 @@ export default function Login() {
           <div className="text-center">
             <p className="text-sm text-muted-foreground">
               Pas encore de compte ?{' '}
-              <Link to="/auth/register" className="text-primary hover:underline">
+              <Link to="/register" className="text-primary hover:underline">
                 Créer un compte
               </Link>
             </p>
