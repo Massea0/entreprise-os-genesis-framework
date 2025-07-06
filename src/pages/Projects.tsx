@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -29,6 +28,7 @@ export default function Projects() {
   const [projects, setProjects] = useState([]);
   const [companies, setCompanies] = useState([]);
   const [employees, setEmployees] = useState([]);
+  const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [showPlanner, setShowPlanner] = useState(false);
@@ -42,15 +42,17 @@ export default function Projects() {
     try {
       setLoading(true);
       
-      const [projectsData, companiesData, employeesData] = await Promise.all([
+      const [projectsData, companiesData, employeesData, tasksData] = await Promise.all([
         supabase.from('projects').select('*, client_company:companies(name)'),
         supabase.from('companies').select('*'),
-        supabase.from('employees').select('*')
+        supabase.from('employees').select('*'),
+        supabase.from('tasks').select('*')
       ]);
 
       if (projectsData.data) setProjects(projectsData.data);
       if (companiesData.data) setCompanies(companiesData.data);
       if (employeesData.data) setEmployees(employeesData.data);
+      if (tasksData.data) setTasks(tasksData.data);
     } catch (error) {
       console.error('Error loading data:', error);
       toast({
@@ -70,6 +72,53 @@ export default function Projects() {
       title: "🎉 Projet créé !",
       description: "Le projet a été créé avec succès par Synapse"
     });
+  };
+
+  const handleTaskUpdate = async (taskId, updates) => {
+    try {
+      const { error } = await supabase
+        .from('tasks')
+        .update(updates)
+        .eq('id', taskId);
+
+      if (error) throw error;
+      
+      // Recharger les tâches
+      const { data: updatedTasks } = await supabase.from('tasks').select('*');
+      if (updatedTasks) setTasks(updatedTasks);
+    } catch (error) {
+      console.error('Error updating task:', error);
+      toast({
+        variant: "destructive",
+        title: "Erreur",
+        description: "Erreur lors de la mise à jour de la tâche"
+      });
+    }
+  };
+
+  const handleTaskCreate = async (taskData) => {
+    try {
+      const { data, error } = await supabase
+        .from('tasks')
+        .insert([taskData])
+        .select()
+        .single();
+
+      if (error) throw error;
+      
+      setTasks([...tasks, data]);
+      toast({
+        title: "Tâche créée",
+        description: "La nouvelle tâche a été créée avec succès"
+      });
+    } catch (error) {
+      console.error('Error creating task:', error);
+      toast({
+        variant: "destructive",
+        title: "Erreur",
+        description: "Erreur lors de la création de la tâche"
+      });
+    }
   };
 
   const filteredProjects = projects.filter(project =>
@@ -247,7 +296,12 @@ export default function Projects() {
         </TabsContent>
 
         <TabsContent value="kanban">
-          <KanbanBoard />
+          <KanbanBoard 
+            tasks={tasks}
+            onTaskUpdate={handleTaskUpdate}
+            onTaskCreate={handleTaskCreate}
+            onTaskEdit={handleTaskUpdate}
+          />
         </TabsContent>
 
         <TabsContent value="gantt">
