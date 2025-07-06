@@ -1,9 +1,14 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
-import { Users, User, Crown, Building2, Plus, Minus, ExternalLink } from 'lucide-react';
+import { usePDFExport } from '@/hooks/usePDFExport';
+import { useToast } from '@/hooks/use-toast';
+import { Users, User, Crown, Building2, Plus, Minus, ExternalLink, Download, Search, Filter } from 'lucide-react';
 
 interface Employee {
   id: string;
@@ -266,9 +271,15 @@ const HierarchyLevel: React.FC<{
 };
 
 export const ConventionalOrgChart: React.FC = () => {
+  const navigate = useNavigate();
+  const { exportToPDF } = usePDFExport();
+  const { toast } = useToast();
   const [employees, setEmployees] = useState<Employee[]>([]);
+  const [filteredEmployees, setFilteredEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
 
   // Fonction pour construire la hiérarchie
   const buildHierarchy = (employeeList: any[]): Employee[] => {
@@ -354,7 +365,7 @@ export const ConventionalOrgChart: React.FC = () => {
         }
       });
     };
-    collectIds(employees);
+    collectIds(filteredEmployees);
     setExpandedNodes(allIds);
   };
 
@@ -363,10 +374,42 @@ export const ConventionalOrgChart: React.FC = () => {
   };
 
   const handleViewProfile = (employeeId: string) => {
-    // TODO: Navigation vers la fiche employé
-    console.log('View profile for employee:', employeeId);
-    // Ici on pourrait utiliser le router pour naviguer vers /hr/employees/{id}
+    navigate(`/hr/employees/${employeeId}`);
   };
+
+  const handleExportPDF = async () => {
+    try {
+      await exportToPDF('org-chart-container', 'organigramme-entreprise');
+      toast({
+        title: "Export réussi",
+        description: "L'organigramme a été exporté en PDF avec succès"
+      });
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Erreur d'export",
+        description: "Impossible d'exporter l'organigramme en PDF"
+      });
+    }
+  };
+
+  // Filtrage des employés
+  const applyFilters = (employeeList: Employee[]) => {
+    return employeeList.filter(emp => {
+      const matchesSearch = searchTerm === '' || 
+        `${emp.first_name} ${emp.last_name}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        emp.positions?.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        emp.departments?.name.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      // Pour le moment, tous les employés récupérés sont actifs
+      return matchesSearch;
+    });
+  };
+
+  useEffect(() => {
+    const filtered = applyFilters(employees);
+    setFilteredEmployees(filtered);
+  }, [employees, searchTerm, statusFilter]);
 
   // Calculer les dimensions du canvas
   const calculateCanvasDimensions = () => {

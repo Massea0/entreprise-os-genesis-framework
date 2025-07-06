@@ -20,6 +20,7 @@ import QuoteForm from "./pages/business/QuoteForm";
 import Invoices from "./pages/business/Invoices";
 import Clients from "./pages/business/Clients";
 import HREmployees from "./pages/hr/Employees";
+import HREmployeeDetail from "./pages/hr/EmployeeDetail";
 import HRDepartments from "./pages/hr/Departments";
 import HROrganization from "./pages/hr/Organization";
 import NotFound from "./pages/NotFound";
@@ -86,6 +87,14 @@ const App = () => (
                 <ProtectedRoute requiredRole="hr_manager">
                   <AppLayout>
                     <HREmployees />
+                  </AppLayout>
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/hr/employees/:id" element={
+                <ProtectedRoute requiredRole="hr_manager">
+                  <AppLayout>
+                    <HREmployeeDetail />
                   </AppLayout>
                 </ProtectedRoute>
               } />
