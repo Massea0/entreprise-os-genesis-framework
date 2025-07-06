@@ -30,6 +30,7 @@ import Invoices from "./pages/business/Invoices";
 import Clients from "./pages/business/Clients";
 import SynapsePage from "./pages/SynapsePage";
 import SupportAdmin from "./pages/admin/SupportAdmin";
+import AdminDashboard from "./pages/admin/AdminDashboard";
 
 const queryClient = new QueryClient();
 
@@ -180,6 +181,14 @@ function App() {
                 } />
 
                 {/* Support/Admin Routes */}
+                <Route path="/admin" element={
+                  <ProtectedRoute>
+                    <AppLayout>
+                      <AdminDashboard />
+                    </AppLayout>
+                  </ProtectedRoute>
+                } />
+                
                 <Route path="/admin/support" element={
                   <ProtectedRoute>
                     <AppLayout>

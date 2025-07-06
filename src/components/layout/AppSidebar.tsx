@@ -7,7 +7,8 @@ import {
   BarChart3, 
   Settings,
   Home,
-  Mic
+  Mic,
+  Shield
 } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
 import {
@@ -44,6 +45,13 @@ const menuItems = [
     icon: Mic,
     roles: ['admin', 'hr_manager', 'client'],
     description: "Assistant vocal IA"
+  },
+  {
+    title: "🛡️ Administration",
+    url: "/admin",
+    icon: Shield,
+    roles: ['admin'],
+    description: "Panel d'administration système"
   },
   {
     title: "Projets",
