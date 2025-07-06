@@ -161,9 +161,30 @@ gantt
 
   const response = await callGemini(prompt);
   
-  // Extraire le code Mermaid de la réponse
-  const mermaidMatch = response.match(/```mermaid\n([\s\S]*?)\n```/) || response.match(/gantt[\s\S]*/);
-  return mermaidMatch ? mermaidMatch[1] || mermaidMatch[0] : response.trim();
+  // Nettoyer et extraire le code Mermaid
+  let cleanedResponse = response.trim();
+  
+  // Supprimer les balises markdown si présentes
+  if (cleanedResponse.includes('```mermaid')) {
+    const match = cleanedResponse.match(/```mermaid\s*\n([\s\S]*?)\n```/);
+    if (match) {
+      cleanedResponse = match[1].trim();
+    }
+  } else if (cleanedResponse.includes('```')) {
+    const match = cleanedResponse.match(/```\s*\n([\s\S]*?)\n```/);
+    if (match) {
+      cleanedResponse = match[1].trim();
+    }
+  }
+  
+  // Nettoyer les caractères invalides et les lignes vides
+  cleanedResponse = cleanedResponse
+    .replace(/[\r\n]+$/g, '') // Supprimer les sauts de ligne en fin
+    .replace(/^\s*[\r\n]/gm, '') // Supprimer les lignes vides
+    .replace(/\s+:/g, ':') // Nettoyer les espaces avant les deux-points
+    .trim();
+  
+  return cleanedResponse;
 }
 
 async function generateFlowchartDiagram(task: any) {

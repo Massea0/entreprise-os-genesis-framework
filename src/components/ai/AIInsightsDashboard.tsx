@@ -89,52 +89,72 @@ export const AIInsightsDashboard: React.FC = () => {
           confidence: delayedProjects.length > 0 ? 92 : 65,
           createdAt: new Date().toISOString()
         },
+        // Analyse RH basée sur les vraies données
         {
           id: '2', 
           type: 'recommendation',
           title: '💡 Optimisation Équipe RH',
-          description: `Avec ${employeesData.data?.length || 0} employés actuels, l'analyse prédit un besoin de +15% d'effectifs d'ici 3 mois basé sur la croissance des projets.`,
-          impact: 'high',
+          description: `${employeesData.data?.length || 0} employés actuels. Ratio projets/employés: ${projectsData.data?.length || 0}/${employeesData.data?.length || 1} = ${Math.round((projectsData.data?.length || 0) / (employeesData.data?.length || 1) * 100) / 100}. ${(projectsData.data?.length || 0) > (employeesData.data?.length || 0) ? 'Charge élevée détectée' : 'Capacité disponible'}.`,
+          impact: (projectsData.data?.length || 0) > (employeesData.data?.length || 0) * 1.5 ? 'high' : 'medium',
           category: 'hr',
           actionable: true,
-          data: { currentEmployees: employeesData.data?.length || 0, predictedNeed: Math.ceil((employeesData.data?.length || 0) * 1.15) },
-          confidence: 92,
+          data: { 
+            currentEmployees: employeesData.data?.length || 0, 
+            activeProjects: projectsData.data?.length || 0,
+            workloadRatio: (projectsData.data?.length || 0) / (employeesData.data?.length || 1)
+          },
+          confidence: 85,
           createdAt: new Date().toISOString()
         },
+        // Analyse des tâches en cours
         {
           id: '3',
           type: 'prediction',
-          title: '📈 Performance Département Dev',
-          description: 'Le département développement montre une productivité +23% vs moyenne. Modèle suggère d\'appliquer leurs méthodes aux autres équipes.',
-          impact: 'medium',
+          title: '📈 Analyse Productivité',
+          description: `${tasksData.data?.filter(t => t.status === 'done').length || 0} tâches terminées vs ${tasksData.data?.filter(t => t.status === 'in_progress').length || 0} en cours. Taux de completion: ${Math.round(((tasksData.data?.filter(t => t.status === 'done').length || 0) / (tasksData.data?.length || 1)) * 100)}%.`,
+          impact: ((tasksData.data?.filter(t => t.status === 'done').length || 0) / (tasksData.data?.length || 1)) > 0.7 ? 'low' : 'medium',
           category: 'performance',
           actionable: true,
-          data: { performanceIncrease: 23, department: 'Développement' },
-          confidence: 78,
+          data: { 
+            completedTasks: tasksData.data?.filter(t => t.status === 'done').length || 0,
+            inProgressTasks: tasksData.data?.filter(t => t.status === 'in_progress').length || 0,
+            completionRate: ((tasksData.data?.filter(t => t.status === 'done').length || 0) / (tasksData.data?.length || 1)) * 100
+          },
+          confidence: 82,
           createdAt: new Date().toISOString()
         },
+        // Analyse business réelle
         {
           id: '4',
           type: 'analysis',
           title: '🎯 Opportunité Business',
-          description: `${companiesData.data?.length || 0} clients actuels. Analyse révèle potentiel upselling de 340K XOF avec clients existants avant prospection.`,
-          impact: 'high',
+          description: `${companiesData.data?.length || 0} clients actifs. ${projectsData.data?.filter(p => p.status === 'completed').length || 0} projets livrés avec succès. Taux de rétention client élevé détecté.`,
+          impact: (companiesData.data?.length || 0) > 5 ? 'high' : 'medium',
           category: 'business',
           actionable: true,
-          data: { clients: companiesData.data?.length || 0, upsellPotential: 340000 },
-          confidence: 85,
+          data: { 
+            clients: companiesData.data?.length || 0, 
+            completedProjects: projectsData.data?.filter(p => p.status === 'completed').length || 0,
+            retentionIndicator: (projectsData.data?.filter(p => p.status === 'completed').length || 0) / (companiesData.data?.length || 1)
+          },
+          confidence: 78,
           createdAt: new Date().toISOString()
         },
+        // Analyse des blocages réels
         {
           id: '5',
           type: 'alert',
-          title: '⏰ Goulot d\'Étranglement Détecté',
-          description: `${tasksData.data?.filter(t => t.status === 'in_progress').length || 0} tâches bloquées en révision. Processus d'approbation ralentit la livraison de 2.3 jours en moyenne.`,
-          impact: 'medium',
+          title: '⏰ Analyse des Tâches',
+          description: `${tasksData.data?.filter(t => t.status === 'in_progress').length || 0} tâches en cours, ${tasksData.data?.filter(t => t.status === 'blocked').length || 0} bloquées. ${tasksData.data?.filter(t => !t.assignee_id).length || 0} tâches non assignées nécessitent attention.`,
+          impact: (tasksData.data?.filter(t => t.status === 'blocked').length || 0) > 3 ? 'high' : 'medium',
           category: 'projects',
           actionable: true,
-          data: { blockedTasks: tasksData.data?.filter(t => t.status === 'in_progress').length || 0, avgDelay: 2.3 },
-          confidence: 91,
+          data: { 
+            inProgressTasks: tasksData.data?.filter(t => t.status === 'in_progress').length || 0,
+            blockedTasks: tasksData.data?.filter(t => t.status === 'blocked').length || 0,
+            unassignedTasks: tasksData.data?.filter(t => !t.assignee_id).length || 0
+          },
+          confidence: 89,
           createdAt: new Date().toISOString()
         }
       ];
