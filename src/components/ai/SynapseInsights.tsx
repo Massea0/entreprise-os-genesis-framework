@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { usePageInsights } from '@/hooks/usePageInsights';
 import {
   Brain,
   Sparkles,
@@ -52,255 +53,44 @@ export const SynapseInsights: React.FC<SynapseInsightsProps> = ({
   compact = false,
   maxInsights = 3
 }) => {
-  const [insights, setInsights] = useState<SynapseInsight[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const { toast } = useToast();
-
-  useEffect(() => {
-    generateInsights();
-  }, [context, entityId, entityType]);
-
-  const generateInsights = async () => {
-    setLoading(true);
-    try {
-      // Simuler l'analyse IA basée sur le contexte
-      const contextInsights = await generateContextualInsights(context, entityId, entityType);
-      setInsights(contextInsights.slice(0, maxInsights));
-    } catch (error) {
-      console.error('Erreur génération insights:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const generateContextualInsights = async (context: string, entityId?: string, entityType?: string): Promise<SynapseInsight[]> => {
-    // Générer des insights basés sur les vraies données
-    const baseInsights: SynapseInsight[] = [];
-
-    try {
-      // Récupérer les données contextuelles réelles
-      const [projectsRes, tasksRes, employeesRes, devisRes, invoicesRes] = await Promise.all([
-        supabase.from('projects').select('*').limit(20),
-        supabase.from('tasks').select('*').limit(50),
-        supabase.from('employees').select('*').limit(30),
-        supabase.from('devis').select('*').limit(20),
-        supabase.from('invoices').select('*').limit(20)
-      ]);
-
-      const projects = projectsRes.data || [];
-      const tasks = tasksRes.data || [];
-      const employees = employeesRes.data || [];
-      const devis = devisRes.data || [];
-      const invoices = invoicesRes.data || [];
-
-      switch (context) {
-        case 'dashboard':
-        case 'admin-dashboard':
-          const activeProjects = projects.filter(p => p.status === 'in_progress');
-          const completedTasks = tasks.filter(t => t.status === 'done');
-          const totalRevenue = invoices.filter(i => i.status === 'paid').reduce((sum, i) => sum + (i.amount || 0), 0);
-          
-          baseInsights.push(
-            {
-              id: '1',
-              type: 'success',
-              category: 'Performance',
-              title: `🚀 ${activeProjects.length} projets actifs`,
-              description: `${completedTasks.length} tâches terminées récemment. Excellente dynamique !`,
-              confidence: 0.95,
-              impact: 'high',
-              priority: 1,
-              action: 'Voir détails projets'
-            },
-            {
-              id: '2',
-              type: 'info',
-              category: 'Finance',
-              title: `💰 CA: ${new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'XOF', minimumFractionDigits: 0 }).format(totalRevenue)}`,
-              description: `${invoices.filter(i => i.status === 'sent').length} factures en attente de paiement`,
-              confidence: 0.98,
-              impact: 'medium',
-              priority: 2,
-              action: 'Analyser finances'
-            }
-          );
-
-          if (activeProjects.length > 5) {
-            baseInsights.push({
-              id: '3',
-              type: 'warning',
-              category: 'Charge',
-              title: '⚠️ Charge élevée détectée',
-              description: `${activeProjects.length} projets simultanés. Surveiller la capacité équipe`,
-              confidence: 0.88,
-              impact: 'medium',
-              priority: 2,
-              action: 'Équilibrer charge'
-            });
-          }
-          break;
-
-        case 'client-dashboard':
-          const clientProjects = projects.length;
-          const clientInvoices = invoices.length;
-          const overdueInvoices = invoices.filter(i => 
-            i.status === 'sent' && new Date(i.due_date) < new Date()
-          );
-          
-          baseInsights.push(
-            {
-              id: '1',
-              type: 'info',
-              category: 'Projets',
-              title: `📊 ${clientProjects} projets en portefeuille`,
-              description: 'Suivi détaillé de vos investissements technologiques',
-              confidence: 1.0,
-              impact: 'medium',
-              priority: 2,
-              action: 'Consulter projets'
-            }
-          );
-
-          if (overdueInvoices.length > 0) {
-            baseInsights.push({
-              id: '2',
-              type: 'warning',
-              category: 'Paiements',
-              title: `🔔 ${overdueInvoices.length} facture(s) en retard`,
-              description: 'Des paiements nécessitent votre attention',
-              confidence: 1.0,
-              impact: 'high',
-              priority: 1,
-              action: 'Régler factures'
-            });
-          }
-          break;
-      }
-    } catch (error) {
-      console.error('Erreur lors de la génération des insights:', error);
-      // Fallback avec des insights par défaut
-      baseInsights.push({
-        id: '1',
-        type: 'info',
-        category: 'IA',
-        title: '🧠 Synapse activé',
-        description: 'Intelligence artificielle prête à vous assister',
-        confidence: 1.0,
-        impact: 'medium',
-        priority: 3
-      });
-    }
-
-    return baseInsights;
-  };
+  const { 
+    insights: pageInsights, 
+    loading, 
+    currentPageContext, 
+    refreshInsights,
+    clearInsights 
+  } = usePageInsights();
+  
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  
+  // Convertir les insights de page en format SynapseInsight
+  const insights: SynapseInsight[] = pageInsights.map(pi => ({
+    id: pi.id,
+    type: pi.type,
+    category: pi.pageContext,
+    title: pi.title,
+    description: pi.description,
+    confidence: pi.confidence,
+    impact: pi.type === 'critical' ? 'high' : pi.type === 'warning' ? 'medium' : 'low',
+    priority: pi.type === 'critical' ? 1 : pi.type === 'warning' ? 2 : 3,
+    action: 'Voir détails'
+  }));
 
   const runDeepAnalysis = async () => {
     setIsAnalyzing(true);
     toast({
       title: "🧠 Analyse approfondie en cours",
-      description: "Synapse analyse votre environnement..."
+      description: `Synapse analyse ${currentPageContext}...`
     });
 
     try {
-      // Analyse approfondie avec vraies données actualisées
-      const [projectsRes, tasksRes, employeesRes, devisRes, invoicesRes] = await Promise.all([
-        supabase.from('projects').select('*').limit(100),
-        supabase.from('tasks').select('*').limit(200),
-        supabase.from('employees').select('*').limit(100),
-        supabase.from('devis').select('*').limit(50),
-        supabase.from('invoices').select('*').limit(50)
-      ]);
-
-      const projects = projectsRes.data || [];
-      const tasks = tasksRes.data || [];
-      const employees = employeesRes.data || [];
-      const devis = devisRes.data || [];
-      const invoices = invoicesRes.data || [];
-
-      // Génération d'insights avancés
-      const advancedInsights: SynapseInsight[] = [];
-
-      // Analyse performance projets
-      const delayedProjects = projects.filter(p => 
-        p.status === 'in_progress' && p.end_date && new Date(p.end_date) < new Date()
-      );
+      // Régénérer les insights pour la page actuelle
+      await refreshInsights();
       
-      if (delayedProjects.length > 0) {
-        advancedInsights.push({
-          id: 'delay-analysis',
-          type: 'warning',
-          category: 'Performance',
-          title: `⚠️ ${delayedProjects.length} projet(s) en retard`,
-          description: `Analyse des causes: surcharge équipe (${Math.round(delayedProjects.length / projects.length * 100)}%), complexité sous-estimée`,
-          confidence: 0.92,
-          impact: 'high',
-          priority: 1,
-          action: 'Réajuster plannings'
-        });
-      }
-
-      // Analyse financière avancée
-      const totalRevenue = invoices.filter(i => i.status === 'paid').reduce((sum, i) => sum + (i.amount || 0), 0);
-      const pendingRevenue = invoices.filter(i => i.status === 'sent').reduce((sum, i) => sum + (i.amount || 0), 0);
-      
-      if (pendingRevenue > totalRevenue * 0.3) {
-        advancedInsights.push({
-          id: 'cashflow-analysis',
-          type: 'critical',
-          category: 'Finance',
-          title: '🚨 Tension de trésorerie détectée',
-          description: `${new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'XOF' }).format(pendingRevenue)} en attente (${Math.round(pendingRevenue/totalRevenue*100)}% du CA)`,
-          confidence: 0.96,
-          impact: 'high',
-          priority: 1,
-          action: 'Relancer clients'
-        });
-      }
-
-      // Analyse RH
-      if (employees.length > 0) {
-        const activeEmployees = employees.filter(e => e.employment_status === 'active');
-        const avgPerformance = activeEmployees.reduce((sum, e) => sum + (e.performance_score || 0), 0) / activeEmployees.length;
-        
-        advancedInsights.push({
-          id: 'hr-performance',
-          type: avgPerformance > 7 ? 'success' : 'info',
-          category: 'RH',
-          title: `👥 Performance équipe: ${avgPerformance.toFixed(1)}/10`,
-          description: `${activeEmployees.length} employés actifs, score moyen excellent`,
-          confidence: 0.88,
-          impact: 'medium',
-          priority: 2,
-          action: 'Plan formation'
-        });
-      }
-
-      // Prédictions basées sur les tendances
-      const recentTasks = tasks.filter(t => 
-        t.created_at && new Date(t.created_at) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
-      );
-      
-      if (recentTasks.length > tasks.length * 0.4) {
-        advancedInsights.push({
-          id: 'growth-prediction',
-          type: 'success',
-          category: 'Prédiction',
-          title: '📈 Croissance activité détectée',
-          description: `+${Math.round(recentTasks.length/tasks.length*100)}% nouvelles tâches ce mois. Projection: +25% CA trimestre`,
-          confidence: 0.84,
-          impact: 'high',
-          priority: 1,
-          action: 'Anticiper ressources'
-        });
-      }
-
-      // Mettre à jour avec les nouveaux insights
-      setInsights(advancedInsights.slice(0, maxInsights));
-
       toast({
         title: "✨ Analyse approfondie terminée",
-        description: `${advancedInsights.length} nouveaux insights générés`
+        description: `Insights mis à jour pour ${currentPageContext}`
       });
 
     } catch (error) {
@@ -471,7 +261,7 @@ export const SynapseInsights: React.FC<SynapseInsightsProps> = ({
             </div>
             <div className="flex items-center gap-1">
               <Eye className="h-3 w-3" />
-              <span>Contexte: {context}</span>
+              <span>Contexte: {currentPageContext}</span>
             </div>
           </div>
         </div>

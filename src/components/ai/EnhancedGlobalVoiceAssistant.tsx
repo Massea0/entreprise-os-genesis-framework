@@ -126,13 +126,13 @@ export const EnhancedGlobalVoiceAssistant: React.FC<EnhancedGlobalVoiceAssistant
 
       {/* Interface contextuelle expandée */}
       {isExpanded && (
-        <Card className="fixed bottom-24 right-6 w-96 z-40 shadow-2xl border-primary/20 bg-white/95 backdrop-blur-sm max-h-[80vh] overflow-hidden">
-          <CardHeader className="pb-2">
-            <div className="flex items-center justify-between mb-3">
+        <Card className="fixed bottom-24 right-6 w-96 z-50 shadow-2xl border-primary/20 bg-white/95 backdrop-blur-sm max-h-[80vh] overflow-hidden">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
-                <Brain className="h-5 w-5 text-primary" />
-                <CardTitle className="text-lg">Synapse IA</CardTitle>
-                <Badge variant="outline" className="text-xs">
+                <Brain className="h-5 w-5 text-primary animate-pulse" />
+                <CardTitle className="text-lg font-bold">Synapse IA</CardTitle>
+                <Badge variant="outline" className="text-xs bg-primary/10">
                   {getModuleIcon(currentModule)}
                   <span className="ml-1 capitalize">{currentModule}</span>
                 </Badge>
@@ -141,74 +141,115 @@ export const EnhancedGlobalVoiceAssistant: React.FC<EnhancedGlobalVoiceAssistant
                 variant="ghost"
                 size="sm"
                 onClick={() => setIsExpanded(false)}
-                className="h-7 w-7 p-0 hover:bg-red-100"
+                className="h-8 w-8 p-0 hover:bg-red-100 rounded-full"
               >
-                <X className="h-3 w-3" />
+                <X className="h-4 w-4" />
               </Button>
             </div>
 
-            {/* Onglets */}
-            <div className="flex w-full bg-muted rounded-lg p-1">
+            {/* Onglets améliorés */}
+            <div className="flex w-full bg-muted/50 rounded-xl p-1 border">
               <Button
                 variant={activeTab === 'voice' ? "default" : "ghost"}
                 size="sm"
                 onClick={() => setActiveTab('voice')}
-                className="flex-1 text-xs h-8"
+                className={`flex-1 text-xs h-9 rounded-lg transition-all ${
+                  activeTab === 'voice' 
+                    ? 'bg-primary text-primary-foreground shadow-sm' 
+                    : 'hover:bg-muted'
+                }`}
               >
-                <Zap className="h-3 w-3 mr-1" />
-                Voice Assistant
+                <Zap className="h-4 w-4 mr-2" />
+                Voice Live
               </Button>
               <Button
                 variant={activeTab === 'insights' ? "default" : "ghost"}
-                size="sm"
+                size="sm" 
                 onClick={() => setActiveTab('insights')}
-                className="flex-1 text-xs h-8"
+                className={`flex-1 text-xs h-9 rounded-lg transition-all ${
+                  activeTab === 'insights' 
+                    ? 'bg-primary text-primary-foreground shadow-sm' 
+                    : 'hover:bg-muted'
+                }`}
               >
-                <Brain className="h-3 w-3 mr-1" />
+                <Brain className="h-4 w-4 mr-2" />
                 Insights
               </Button>
             </div>
           </CardHeader>
 
-          <CardContent className="h-[500px] overflow-y-auto">
+          <CardContent className="h-[520px] overflow-y-auto p-4">
             {activeTab === 'voice' && (
               <div className="space-y-4">
                 {/* Statistiques contextuelles */}
                 <div className="grid grid-cols-2 gap-2 text-xs">
-                  <div className="bg-blue-50 p-2 rounded flex items-center gap-1">
-                    <Briefcase className="h-3 w-3 text-blue-600" />
-                    <span>{stats.projectsCount} projets</span>
+                  <div className="bg-gradient-to-r from-blue-50 to-blue-100 p-3 rounded-lg flex items-center gap-2 border border-blue-200">
+                    <Briefcase className="h-4 w-4 text-blue-600" />
+                    <div>
+                      <div className="font-semibold text-blue-900">{stats.projectsCount}</div>
+                      <div className="text-blue-700">projets</div>
+                    </div>
                   </div>
                   {userRole !== 'client' && (
-                    <div className="bg-green-50 p-2 rounded flex items-center gap-1">
-                      <Users className="h-3 w-3 text-green-600" />
-                      <span>{stats.employeesCount} employés</span>
+                    <div className="bg-gradient-to-r from-green-50 to-green-100 p-3 rounded-lg flex items-center gap-2 border border-green-200">
+                      <Users className="h-4 w-4 text-green-600" />
+                      <div>
+                        <div className="font-semibold text-green-900">{stats.employeesCount}</div>
+                        <div className="text-green-700">employés</div>
+                      </div>
                     </div>
                   )}
-                  <div className="bg-orange-50 p-2 rounded flex items-center gap-1">
-                    <Target className="h-3 w-3 text-orange-600" />
-                    <span>{stats.companiesCount} client{stats.companiesCount > 1 ? 's' : ''}</span>
+                  <div className="bg-gradient-to-r from-orange-50 to-orange-100 p-3 rounded-lg flex items-center gap-2 border border-orange-200">
+                    <Target className="h-4 w-4 text-orange-600" />
+                    <div>
+                      <div className="font-semibold text-orange-900">{stats.companiesCount}</div>
+                      <div className="text-orange-700">clients</div>
+                    </div>
                   </div>
-                  <div className="bg-purple-50 p-2 rounded flex items-center gap-1">
-                    <MessageSquare className="h-3 w-3 text-purple-600" />
-                    <span>{stats.tasksCount} tâches</span>
+                  <div className="bg-gradient-to-r from-purple-50 to-purple-100 p-3 rounded-lg flex items-center gap-2 border border-purple-200">
+                    <MessageSquare className="h-4 w-4 text-purple-600" />
+                    <div>
+                      <div className="font-semibold text-purple-900">{stats.tasksCount}</div>
+                      <div className="text-purple-700">tâches</div>
+                    </div>
                   </div>
                 </div>
 
-                {/* Interface Gemini Live */}
-                <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-4">
-                  <div className="flex items-center gap-2 mb-3">
-                    <Zap className="h-5 w-5 text-blue-600" />
-                    <span className="font-medium">Synapse Voice Assistant</span>
+                {/* Interface Gemini Live améliorée */}
+                <div className="bg-gradient-to-br from-blue-50 via-purple-50 to-indigo-50 rounded-xl p-4 border border-blue-200 shadow-sm">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="p-2 bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg">
+                      <Zap className="h-5 w-5 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-gray-900">Synapse Voice Live</h3>
+                      <p className="text-xs text-gray-600">Assistant vocal intelligent avec accès données</p>
+                    </div>
                   </div>
                   <GeminiLiveInterface />
                 </div>
 
-                {/* Instructions */}
-                <div className="text-center text-xs text-muted-foreground bg-muted/50 p-3 rounded">
-                  💬 Conversation vocale intelligente avec accès temps réel à vos données
-                  <div className="mt-1 text-green-600 font-medium">
-                    ✅ Contexte: {currentModule} • {hasData ? 'Données chargées' : 'Aucune donnée'}
+                {/* Instructions améliorées */}
+                <div className="bg-gradient-to-r from-gray-50 to-gray-100 p-4 rounded-xl border border-gray-200">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Activity className="h-4 w-4 text-primary" />
+                    <span className="font-medium text-sm">État du système</span>
+                  </div>
+                  <div className="text-xs space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">Contexte:</span>
+                      <span className="font-medium capitalize">{currentModule}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">Données:</span>
+                      <span className={`font-medium ${hasData ? 'text-green-600' : 'text-orange-600'}`}>
+                        {hasData ? '✅ Chargées' : '⏳ En attente'}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">Voice AI:</span>
+                      <span className="font-medium text-blue-600">🎤 Disponible</span>
+                    </div>
                   </div>
                 </div>
               </div>
