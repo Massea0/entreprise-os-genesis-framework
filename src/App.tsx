@@ -8,7 +8,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { AIContextProvider } from "@/components/ai/AIContextProvider";
-import { GlobalSynapseProvider } from "@/components/ai/GlobalSynapseProvider";
+import { EnhancedGlobalVoiceAssistant } from "@/components/ai/EnhancedGlobalVoiceAssistant";
 
 // Pages
 import Index from "./pages/Index";
@@ -44,7 +44,7 @@ function App() {
         <BrowserRouter>
           <AuthProvider>
             <AIContextProvider>
-              <GlobalSynapseProvider>
+              <>
                 <Routes>
                 {/* Public routes */}
                 <Route path="/login" element={<Login />} />
@@ -229,7 +229,8 @@ function App() {
                 {/* Redirect unmatched routes to dashboard */}
                 <Route path="*" element={<Navigate to="/dashboard" replace />} />
               </Routes>
-            </GlobalSynapseProvider>
+              <EnhancedGlobalVoiceAssistant />
+            </>
           </AIContextProvider>
           </AuthProvider>
         </BrowserRouter>
