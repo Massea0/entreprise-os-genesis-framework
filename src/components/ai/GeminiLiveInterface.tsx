@@ -25,20 +25,20 @@ export const GeminiLiveInterface: React.FC = () => {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
 
-  const connectToGeminiLive = async () => {
+  const connectToSynapseLive = async () => {
     try {
       setConnectionStatus('connecting');
       
-      // Se connecter au WebSocket Supabase qui fait le relais vers Gemini
-      const wsUrl = `wss://qlqgyrfqiflnqknbtycw.functions.supabase.co/gemini-live-voice`;
+      // Se connecter au WebSocket Supabase qui fait le relais vers Synapse
+      const wsUrl = `wss://qlqgyrfqiflnqknbtycw.functions.supabase.co/synapse-live-voice`;
       wsRef.current = new WebSocket(wsUrl);
 
       wsRef.current.onopen = () => {
-        console.log('Connecté à Gemini Live');
+        console.log('Connecté à Synapse IA');
         setIsConnected(true);
         setConnectionStatus('connected');
         toast({
-          title: "🎤 Gemini Live activé",
+          title: "🧠 Synapse IA activé",
           description: "Conversation vocale en temps réel active"
         });
       };
@@ -46,9 +46,9 @@ export const GeminiLiveInterface: React.FC = () => {
       wsRef.current.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
-          console.log('Message de Gemini:', data);
+          console.log('Message de Synapse:', data);
           
-          // Traiter les réponses audio de Gemini
+          // Traiter les réponses audio de Synapse
           if (data.candidates && data.candidates[0]?.content?.parts) {
             const parts = data.candidates[0].content.parts;
             for (const part of parts) {
@@ -69,7 +69,7 @@ export const GeminiLiveInterface: React.FC = () => {
         toast({
           variant: "destructive",
           title: "Erreur de connexion",
-          description: "Impossible de se connecter à Gemini Live"
+          description: "Impossible de se connecter à Synapse IA"
         });
       };
 
@@ -119,7 +119,7 @@ export const GeminiLiveInterface: React.FC = () => {
 
       mediaRecorderRef.current.onstop = async () => {
         const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-        await sendAudioToGemini(audioBlob);
+        await sendAudioToSynapse(audioBlob);
       };
 
       mediaRecorderRef.current.start(1000); // Capturer par chunks de 1 seconde
@@ -142,7 +142,7 @@ export const GeminiLiveInterface: React.FC = () => {
     setIsRecording(false);
   };
 
-  const sendAudioToGemini = async (audioBlob: Blob) => {
+  const sendAudioToSynapse = async (audioBlob: Blob) => {
     if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
       return;
     }
@@ -215,7 +215,7 @@ export const GeminiLiveInterface: React.FC = () => {
           {connectionStatus === 'connected' && (
             <div className="flex items-center justify-center gap-2 text-green-600">
               <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-              <span className="text-sm">Connecté à Gemini Live</span>
+              <span className="text-sm">Connecté à Synapse IA</span>
             </div>
           )}
           {connectionStatus === 'connecting' && (
@@ -252,12 +252,12 @@ export const GeminiLiveInterface: React.FC = () => {
         <div className="flex gap-2">
           {!isConnected ? (
             <Button 
-              onClick={connectToGeminiLive} 
+              onClick={connectToSynapseLive} 
               className="flex-1"
               disabled={connectionStatus === 'connecting'}
             >
               <Zap className="h-4 w-4 mr-2" />
-              Activer Gemini Live
+              Activer Synapse IA
             </Button>
           ) : (
             <>
@@ -289,7 +289,7 @@ export const GeminiLiveInterface: React.FC = () => {
       <div className="text-center text-xs text-muted-foreground bg-muted/30 p-2 rounded">
         {isConnected ? 
           "Cliquez sur 'Parler' et conversez naturellement avec Synapse" :
-          "Activez Gemini Live pour une conversation vocale fluide"
+          "Activez Synapse IA pour une conversation vocale fluide"
         }
       </div>
     </div>

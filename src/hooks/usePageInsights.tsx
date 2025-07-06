@@ -122,7 +122,9 @@ export const usePageInsights = () => {
               id: `projects-active-${Date.now()}`,
               pageContext: 'projects',
               title: `🚀 ${activeProjects.length} projets actifs`,
-              description: `Performance élevée détectée. ${completedProjects.length} projets terminés avec succès.`,
+              description: activeProjects.length > 0 
+                ? `Projets en cours de développement. ${completedProjects.length} projets terminés avec succès.`
+                : `Aucun projet actif pour le moment. ${completedProjects.length} projets terminés.`,
               type: activeProjects.length > 0 ? 'success' : 'info',
               confidence: 0.92,
               timestamp: new Date().toISOString(),
@@ -134,7 +136,7 @@ export const usePageInsights = () => {
               id: `projects-empty-${Date.now()}`,
               pageContext: 'projects',
               title: `📋 Aucun projet trouvé`,
-              description: `Commencez par créer votre premier projet pour suivre l'avancement.`,
+              description: `Commencez par créer votre premier projet pour organiser vos tâches.`,
               type: 'info',
               confidence: 1.0,
               timestamp: new Date().toISOString(),

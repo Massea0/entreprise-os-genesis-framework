@@ -215,7 +215,7 @@ export const EnhancedGlobalVoiceAssistant: React.FC<EnhancedGlobalVoiceAssistant
                   </div>
                 </div>
 
-                {/* Interface Gemini Live améliorée */}
+                {/* Interface Synapse Live améliorée */}
                 <div className="bg-gradient-to-br from-blue-50 via-purple-50 to-indigo-50 rounded-xl p-4 border border-blue-200 shadow-sm">
                   <div className="flex items-center gap-3 mb-4">
                     <div className="p-2 bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg">
