@@ -93,14 +93,18 @@ export default function ProjectDetail() {
       // Charger séparément l'owner s'il existe
       let ownerData = null;
       if (projectData.owner_id) {
-        const { data: employeeData } = await supabase
-          .from('employees')
-          .select('first_name, last_name')
-          .eq('user_id', projectData.owner_id)
-          .single();
-        
-        if (employeeData) {
-          ownerData = employeeData;
+        try {
+          const { data: employeeData, error } = await supabase
+            .from('employees')
+            .select('first_name, last_name')
+            .eq('user_id', projectData.owner_id)
+            .maybeSingle();
+          
+          if (employeeData && !error) {
+            ownerData = employeeData;
+          }
+        } catch (error) {
+          console.log('Owner employee not found:', projectData.owner_id);
         }
       }
 
@@ -118,14 +122,18 @@ export default function ProjectDetail() {
         (tasksData || []).map(async (task) => {
           let assigneeData = null;
           if (task.assignee_id) {
-            const { data: employeeData } = await supabase
-              .from('employees')
-              .select('first_name, last_name')
-              .eq('user_id', task.assignee_id)
-              .single();
-            
-            if (employeeData) {
-              assigneeData = employeeData;
+            try {
+              const { data: employeeData, error } = await supabase
+                .from('employees')
+                .select('first_name, last_name')
+                .eq('user_id', task.assignee_id)
+                .maybeSingle();
+              
+              if (employeeData && !error) {
+                assigneeData = employeeData;
+              }
+            } catch (error) {
+              console.log('Assignee employee not found:', task.assignee_id);
             }
           }
           

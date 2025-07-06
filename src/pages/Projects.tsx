@@ -69,14 +69,18 @@ export default function Projects() {
             // Charger le owner si existe
             let ownerData = null;
             if (project.owner_id) {
-              const { data: employeeData } = await supabase
-                .from('employees')
-                .select('first_name, last_name')
-                .eq('user_id', project.owner_id)
-                .single();
-              
-              if (employeeData) {
-                ownerData = employeeData;
+              try {
+                const { data: employeeData, error } = await supabase
+                  .from('employees')
+                  .select('first_name, last_name')
+                  .eq('user_id', project.owner_id)
+                  .maybeSingle();
+                
+                if (employeeData && !error) {
+                  ownerData = employeeData;
+                }
+              } catch (error) {
+                console.log('Owner employee not found:', project.owner_id);
               }
             }
             
