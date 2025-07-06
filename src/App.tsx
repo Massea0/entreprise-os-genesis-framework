@@ -18,7 +18,7 @@ import WorkDashboard from "./pages/WorkDashboard";
 import Projects from "./pages/Projects";
 import ProjectsList from "./pages/ProjectsList";
 import ProjectDetail from "./pages/ProjectDetail";
-import TaskDetail from "./pages/TaskDetail";
+import TaskDetailGitLab from "./pages/TaskDetailGitLab";
 import Employees from "./pages/hr/Employees";
 import EmployeeDetail from "./pages/hr/EmployeeDetail";
 import Departments from "./pages/hr/Departments";
@@ -105,7 +105,7 @@ function App() {
                 <Route path="/tasks/:id" element={
                   <ProtectedRoute>
                     <AppLayout>
-                      <TaskDetail />
+                      <TaskDetailGitLab />
                     </AppLayout>
                   </ProtectedRoute>
                 } />
