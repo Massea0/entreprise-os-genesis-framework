@@ -143,41 +143,123 @@ serve(async (req) => {
               
               // Charger les données contextuelles
               try {
-                const [projectsRes, employeesRes, tasksRes, devisRes, invoicesRes] = await Promise.all([
-                  supabase.from('projects').select('*').limit(50),
-                  supabase.from('employees').select('*').limit(100),
-                  supabase.from('tasks').select('*').limit(100),
-                  supabase.from('devis').select('*').limit(50),
-                  supabase.from('invoices').select('*').limit(50)
-                ]);
+                // Récupérer d'abord les informations utilisateur pour obtenir company_id
+                const { data: userData, error: userError } = await supabase
+                  .from('users')
+                  .select('*')
+                  .eq('id', data.userId)
+                  .single();
+
+                let userCompanyId = userData?.company_id;
+                console.log(`👤 User data:`, { userId: data.userId, userCompanyId, userRole: contextualData.userRole });
+
+                // Si pas de company_id, créer des données de démonstration
+                if (!userCompanyId && contextualData.userRole === 'admin') {
+                  console.log('🔧 Admin user without company_id, loading all available data');
+                  
+                  // Pour les admins, charger toutes les données disponibles
+                  const [projectsRes, employeesRes, tasksRes, devisRes, invoicesRes, companiesRes] = await Promise.all([
+                    supabase.from('projects').select('*').limit(50),
+                    supabase.from('employees').select('*').limit(100),
+                    supabase.from('tasks').select('*').limit(100),
+                    supabase.from('devis').select('*').limit(50),
+                    supabase.from('invoices').select('*').limit(50),
+                    supabase.from('companies').select('*').limit(10)
+                  ]);
+
+                  contextualData = {
+                    ...contextualData,
+                    projects: projectsRes.data || [],
+                    employees: employeesRes.data || [],
+                    tasks: tasksRes.data || [],
+                    devis: devisRes.data || [],
+                    invoices: invoicesRes.data || []
+                  };
+
+                } else if (userCompanyId) {
+                  console.log(`🏢 Loading data for company: ${userCompanyId}`);
+                  
+                  // Récupérer d'abord les branches de l'entreprise
+                  const { data: branches } = await supabase
+                    .from('branches')
+                    .select('id')
+                    .eq('company_id', userCompanyId);
+                  
+                  const branchIds = branches?.map(b => b.id) || [];
+                  console.log(`🏢 Found ${branchIds.length} branches for company`);
+                  
+                  // Charger les données filtrées par company_id et branch_ids
+                  const [projectsRes, employeesRes, tasksRes, devisRes, invoicesRes] = await Promise.all([
+                    supabase.from('projects').select('*').eq('client_company_id', userCompanyId).limit(50),
+                    branchIds.length > 0 
+                      ? supabase.from('employees').select('*').in('branch_id', branchIds).limit(100)
+                      : supabase.from('employees').select('*').limit(0), // Pas d'employés si pas de branches
+                    supabase.from('tasks').select('*, project:projects!inner(client_company_id)')
+                      .eq('project.client_company_id', userCompanyId).limit(100),
+                    supabase.from('devis').select('*').eq('company_id', userCompanyId).limit(50),
+                    supabase.from('invoices').select('*').eq('company_id', userCompanyId).limit(50)
+                  ]);
+
+                  contextualData = {
+                    ...contextualData,
+                    projects: projectsRes.data || [],
+                    employees: employeesRes.data || [],
+                    tasks: tasksRes.data || [],
+                    devis: devisRes.data || [],
+                    invoices: invoicesRes.data || []
+                  };
+
+                } else {
+                  // Utilisateur sans company_id - données limitées de démonstration
+                  console.log('📊 Creating demo data for user without company_id');
+                  
+                  contextualData = {
+                    ...contextualData,
+                    projects: [
+                      { id: 'demo-1', name: 'Projet de démonstration', status: 'in_progress', start_date: '2024-01-01', end_date: '2024-12-31' },
+                      { id: 'demo-2', name: 'Migration système', status: 'planning', start_date: '2024-06-01', end_date: '2024-08-31' }
+                    ],
+                    employees: [
+                      { id: 'demo-emp-1', first_name: 'Mamadou', last_name: 'Diouf', employment_status: 'active' },
+                      { id: 'demo-emp-2', first_name: 'Fatou', last_name: 'Ba', employment_status: 'active' }
+                    ],
+                    tasks: [
+                      { id: 'demo-task-1', title: 'Analyse des besoins', status: 'done', project_id: 'demo-1' },
+                      { id: 'demo-task-2', title: 'Développement interface', status: 'in_progress', project_id: 'demo-1' },
+                      { id: 'demo-task-3', title: 'Tests utilisateurs', status: 'todo', project_id: 'demo-1' }
+                    ],
+                    devis: [
+                      { id: 'demo-devis-1', number: 'DEV-2024-001', status: 'sent', amount: 2500000 },
+                      { id: 'demo-devis-2', number: 'DEV-2024-002', status: 'accepted', amount: 5000000 }
+                    ],
+                    invoices: [
+                      { id: 'demo-inv-1', number: 'FAC-2024-001', status: 'paid', amount: 2500000 },
+                      { id: 'demo-inv-2', number: 'FAC-2024-002', status: 'sent', amount: 1800000 }
+                    ]
+                  };
+                }
                 
-                contextualData = {
-                  ...contextualData,
-                  projects: projectsRes.data || [],
-                  employees: employeesRes.data || [],
-                  tasks: tasksRes.data || [],
-                  devis: devisRes.data || [],
-                  invoices: invoicesRes.data || []
-                };
-                
-                console.log(`🧠 Context loaded: ${contextualData.projects.length} projects, ${contextualData.tasks.length} tasks`);
+                console.log(`🧠 Context loaded: ${contextualData.projects.length} projects, ${contextualData.tasks.length} tasks, ${contextualData.employees.length} employees`);
                 
                 socket.send(JSON.stringify({
                   type: 'context_loaded',
-                  message: 'Contexte chargé ! Je peux maintenant vous donner des informations précises.',
+                  message: 'Contexte chargé ! Je peux maintenant vous donner des informations précises sur vos données.',
                   timestamp: new Date().toISOString(),
                   stats: {
                     projects: contextualData.projects.length,
                     tasks: contextualData.tasks.length,
-                    employees: contextualData.employees.length
+                    employees: contextualData.employees.length,
+                    devis: contextualData.devis.length,
+                    invoices: contextualData.invoices.length
                   }
                 }));
               } catch (error) {
                 console.error("❌ Error loading context:", error);
                 socket.send(JSON.stringify({
                   type: 'context_error',
-                  message: 'Erreur lors du chargement du contexte',
-                  timestamp: new Date().toISOString()
+                  message: `Erreur lors du chargement du contexte: ${error.message}`,
+                  timestamp: new Date().toISOString(),
+                  details: error
                 }));
               }
             }

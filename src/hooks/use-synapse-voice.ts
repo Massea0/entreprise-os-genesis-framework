@@ -99,6 +99,7 @@ export function useSynapseVoice(options: SynapseVoiceOptions): UseSynapseVoiceRe
   useEffect(() => {
     // Événements de connexion
     const handleStatusChange = (newStatus: ConnectionStatus) => {
+      console.log('[useSynapseVoice] Status change:', newStatus);
       setStatus(newStatus);
       if (newStatus === 'connected') {
         setSessionId(client.sessionId);
@@ -107,18 +108,20 @@ export function useSynapseVoice(options: SynapseVoiceOptions): UseSynapseVoiceRe
     };
 
     const handleConnected = () => {
-      console.log('Client Synapse connecté');
+      console.log('[useSynapseVoice] Client Synapse connecté');
+      setStatus('connected');
       setError(null);
     };
 
     const handleDisconnected = (reason?: string) => {
-      console.log('Client Synapse déconnecté:', reason);
+      console.log('[useSynapseVoice] Client Synapse déconnecté:', reason);
+      setStatus('disconnected');
       setIsListening(false);
       audioStreamingRef.current = false;
     };
 
     const handleError = (clientError: SynapseError) => {
-      console.error('Erreur client Synapse:', clientError);
+      console.error('[useSynapseVoice] Erreur client Synapse:', clientError);
       setError(clientError);
       
       // Arrêter l'audio en cas d'erreur non récupérable
@@ -201,24 +204,31 @@ export function useSynapseVoice(options: SynapseVoiceOptions): UseSynapseVoiceRe
    * Méthodes de contrôle
    */
   const connect = useCallback(async () => {
+    console.log('[useSynapseVoice] connect() appelé, status actuel:', status);
     try {
+      setStatus('connecting');
       await client.connect();
+      console.log('[useSynapseVoice] connect() terminé avec succès');
     } catch (err) {
-      console.error('Erreur lors de la connexion:', err);
+      console.error('[useSynapseVoice] Erreur lors de la connexion:', err);
+      setStatus('error');
       throw err;
     }
-  }, [client]);
+  }, [client, status]);
 
   const disconnect = useCallback(async () => {
+    console.log('[useSynapseVoice] disconnect() appelé');
     try {
       // Arrêter l'audio d'abord
       if (isListening) {
         stopAudioStream();
       }
       
+      setStatus('disconnected');
       await client.disconnect();
+      console.log('[useSynapseVoice] disconnect() terminé avec succès');
     } catch (err) {
-      console.error('Erreur lors de la déconnexion:', err);
+      console.error('[useSynapseVoice] Erreur lors de la déconnexion:', err);
       throw err;
     }
   }, [client, isListening]);

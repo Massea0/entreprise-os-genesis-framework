@@ -5,6 +5,7 @@
  */
 
 import { EventEmitter } from 'eventemitter3';
+import { safeRandomUUID, isWebRTCSupported, getEnvVar, safeLog } from './build-polyfills';
 import { SynapseAudioStreamer, AudioChunkData, VolumeData, SpeechStateData } from './synapse-audio-streamer';
 
 // Ré-export des types pour l'API publique
@@ -158,6 +159,11 @@ export class SynapseVoiceClient extends EventEmitter {
     
     // Configuration des gestionnaires d'événements
     this.setupEventHandlers();
+    
+    safeLog.info('SynapseVoiceClient initialized', { 
+      sessionId: this._sessionId,
+      webRTCSupported: isWebRTCSupported()
+    });
   }
 
   /**
@@ -480,7 +486,79 @@ export class SynapseVoiceClient extends EventEmitter {
       const message = JSON.parse(event.data);
       this.metrics.lastActivity = Date.now();
       
+      safeLog.debug('WebSocket message reçu:', { type: message.type, timestamp: message.timestamp });
+      
       switch (message.type) {
+        // Messages du protocole Synapse edge function
+        case 'connection_established':
+          console.log('✅ Connexion Synapse établie:', message.message);
+          if (message.features) {
+            console.log('🎯 Fonctionnalités disponibles:', message.features);
+          }
+          // Ne pas passer à 'connected' tout de suite, attendre context_loaded
+          this.setStatus('connecting');
+          this.emit('connectionEstablished', message);
+          break;
+          
+        case 'context_loaded':
+          console.log('🧠 Contexte Synapse chargé:', message.message);
+          if (message.stats) {
+            console.log('📊 Statistiques du contexte:', message.stats);
+          }
+          // Maintenant on peut considérer la connexion comme complètement établie
+          this.setStatus('connected');
+          this.emit('connected');
+          this.emit('contextLoaded', message);
+          break;
+          
+        case 'ai_response':
+          console.log('🤖 Réponse IA reçue:', message.message?.substring(0, 100) + '...');
+          const aiMessage: SynapseMessage = {
+            id: this.generateMessageId(),
+            type: 'assistant',
+            content: message.message,
+            timestamp: message.timestamp ? new Date(message.timestamp).getTime() : Date.now(),
+            metadata: {
+              confidence: message.confidence,
+              source: message.source
+            }
+          };
+          this.handleIncomingMessage(aiMessage);
+          break;
+          
+        case 'pong':
+          console.log('🏓 Pong reçu du serveur');
+          this.lastHeartbeat = Date.now();
+          this.emit('pong', message);
+          break;
+          
+        case 'context_error':
+          console.error('❌ Erreur de contexte Synapse:', message.message);
+          this.emit('error', new Error(`Erreur de contexte: ${message.message}`));
+          break;
+          
+        case 'context_refreshed':
+          console.log('🔄 Contexte Synapse rafraîchi:', message.message);
+          this.emit('contextRefreshed', message);
+          break;
+          
+        case 'warning':
+          console.warn('⚠️ Avertissement Synapse:', message.message || 'Avertissement sans détails');
+          if (message.received_type) {
+            console.warn('   Type de message non supporté:', message.received_type);
+          }
+          this.emit('warning', message);
+          break;
+          
+        case 'error':
+          console.error('❌ Erreur Synapse:', message.message || 'Erreur sans détails');
+          if (message.details) {
+            console.error('   Détails:', message.details);
+          }
+          this.emit('error', new Error(message.message || 'Erreur du serveur Synapse'));
+          break;
+
+        // Messages du protocole legacy (rétrocompatibilité)
         case 'message':
           this.handleIncomingMessage(message.data);
           break;
@@ -497,32 +575,24 @@ export class SynapseVoiceClient extends EventEmitter {
           this.handleContextUpdate(message.data);
           break;
           
-        case 'error':
-          this.handleServerError(message.data);
-          break;
-          
         case 'heartbeat':
           this.lastHeartbeat = Date.now();
           break;
           
-        case 'connection_established':
-          console.log('✅ Connexion Synapse établie');
-          break;
-          
-        case 'warning':
-          if (message.data) {
-            console.warn('⚠️ Avertissement Synapse:', message.data);
-          } else {
-            console.warn('⚠️ Avertissement Synapse reçu (sans détails)');
-          }
+        case 'session_ready':
+          console.log('✅ Session Synapse prête (legacy)');
+          this.setStatus('connected');
+          this.emit('connected');
           break;
           
         default:
           console.warn('Type de message WebSocket non reconnu:', message.type, message);
+          this.emit('unknownMessage', message);
       }
       
     } catch (error) {
       console.error('Erreur lors du parsing du message WebSocket:', error);
+      this.emit('error', error);
     }
   }
 
@@ -586,12 +656,12 @@ export class SynapseVoiceClient extends EventEmitter {
    */
   private async initializeSession(): Promise<void> {
     this.sendWebSocketMessage({
-      type: 'sessionInit',
-      data: {
-        sessionId: this._sessionId,
-        context: this._context,
-        audioConfig: this.options.audioConfig
-      }
+      type: 'init_context',
+      userId: this._context.userId,
+      userRole: this._context.userRole,
+      sessionId: this._sessionId,
+      context: this._context,
+      audioConfig: this.options.audioConfig
     });
   }
 
@@ -602,7 +672,7 @@ export class SynapseVoiceClient extends EventEmitter {
     this.lastHeartbeat = Date.now();
     this.heartbeatTimer = setInterval(() => {
       if (this.websocket?.readyState === WebSocket.OPEN) {
-        this.sendWebSocketMessage({ type: 'heartbeat', data: { timestamp: Date.now() } });
+        this.sendWebSocketMessage({ type: 'ping', timestamp: Date.now() });
         
         // Vérifier si on a reçu un heartbeat récemment
         if (Date.now() - this.lastHeartbeat > 30000) {
@@ -730,11 +800,11 @@ export class SynapseVoiceClient extends EventEmitter {
    * Utilitaires
    */
   private generateSessionId(): string {
-    return `synapse_${Date.now()}_${Math.random().toString(36).substring(2)}`;
+    return `synapse_${Date.now()}_${safeRandomUUID().substring(0, 8)}`;
   }
 
   private generateMessageId(): string {
-    return `msg_${Date.now()}_${Math.random().toString(36).substring(2)}`;
+    return `msg_${Date.now()}_${safeRandomUUID().substring(0, 8)}`;
   }
 
   private arrayBufferToBase64(buffer: ArrayBuffer): string {

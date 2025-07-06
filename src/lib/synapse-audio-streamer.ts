@@ -5,6 +5,7 @@
  */
 
 import { EventEmitter } from 'eventemitter3';
+import { isAudioWorkletSupported, safeLog } from './build-polyfills';
 import { 
   registerWorklet, 
   getWorklet, 
@@ -139,6 +140,11 @@ export class SynapseAudioStreamer extends EventEmitter {
     if (this.isInitialized) return;
 
     try {
+      // Vérifier le support des AudioWorklets
+      if (!isAudioWorkletSupported()) {
+        throw new Error('AudioWorklets not supported in this environment');
+      }
+
       // Registrer le worklet de mesure de volume
       if (this.config.enableVolumeMonitoring) {
         await registerWorklet(

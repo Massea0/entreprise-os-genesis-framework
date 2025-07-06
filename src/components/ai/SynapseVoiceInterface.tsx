@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
@@ -6,6 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useAIContext } from '@/components/ai/AIContextProvider';
 import { useSynapseVoice } from '@/hooks/use-synapse-voice';
 import { SynapseVolumeVisualizer } from './SynapseVolumeVisualizer';
+import { safeRandomUUID, getEnvVar, safeLog } from '@/lib/build-polyfills';
 import { 
   Mic, 
   MicOff, 
@@ -20,6 +21,13 @@ import {
   Play,
   Square
 } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import './synapse-voice-interface.scss';
 
 interface SynapseMessage {
@@ -47,15 +55,15 @@ export const SynapseVoiceInterface: React.FC = () => {
   const [toolCalls, setToolCalls] = useState<SynapseToolCall[]>([]);
   const [isOutputMuted, setIsOutputMuted] = useState(false);
 
-  // Contexte d'entreprise basique pour le hook
-  const enterpriseContext = {
+  // Contexte d'entreprise basique pour le hook - mémorisé pour éviter les re-créations
+  const enterpriseContext = useMemo(() => ({
     userId: user?.id || '',
-    companyId: user?.id || '', // Utilisation de l'ID utilisateur comme fallback
+    companyId: user?.company_id || user?.id || '', // Utiliser le vrai company_id si disponible
     role: user?.role || 'employee',
     userRole: (user?.role as 'employee' | 'client' | 'admin') || 'employee',
-    sessionId: crypto.randomUUID(),
+    sessionId: safeRandomUUID(),
     permissions: []
-  };
+  }), [user?.id, user?.company_id, user?.role]);
 
   // Hook Synapse Voice personnalisé
   const {
@@ -71,23 +79,26 @@ export const SynapseVoiceInterface: React.FC = () => {
     error,
     messages: hookMessages
   } = useSynapseVoice({
-    supabaseUrl: import.meta.env.VITE_SUPABASE_URL || '',
-    supabaseKey: import.meta.env.VITE_SUPABASE_ANON_KEY || '',
+    supabaseUrl: getEnvVar('VITE_SUPABASE_URL', ''),
+    supabaseKey: getEnvVar('VITE_SUPABASE_ANON_KEY', ''),
     context: enterpriseContext
   });
 
   // Debug logs
   useEffect(() => {
-    console.log('🔍 SynapseVoiceInterface Debug:', {
+    safeLog.debug('SynapseVoiceInterface Debug:', {
       status,
-      supabaseUrl: import.meta.env.VITE_SUPABASE_URL,
-      hasSupabaseKey: !!import.meta.env.VITE_SUPABASE_ANON_KEY,
-      keyLength: import.meta.env.VITE_SUPABASE_ANON_KEY?.length,
+      supabaseUrl: getEnvVar('VITE_SUPABASE_URL'),
+      hasSupabaseKey: !!getEnvVar('VITE_SUPABASE_ANON_KEY'),
+      keyLength: getEnvVar('VITE_SUPABASE_ANON_KEY')?.length,
       enterpriseContext,
       client: !!client,
-      connectFunction: !!connect
+      connectFunction: !!connect,
+      userId: user?.id,
+      userCompanyId: user?.company_id,
+      userRole: user?.role
     });
-  }, [status, enterpriseContext, client, connect]);
+  }, [status, enterpriseContext, client, connect, user]);
 
   // Gestion des événements du client
   useEffect(() => {
@@ -95,7 +106,7 @@ export const SynapseVoiceInterface: React.FC = () => {
 
     const handleMessage = (message: any) => {
       const newMessage: SynapseMessage = {
-        id: crypto.randomUUID(),
+        id: safeRandomUUID(),
         type: message.role === 'user' ? 'user' : 'assistant',
         content: message.content,
         timestamp: new Date(),
@@ -123,7 +134,7 @@ export const SynapseVoiceInterface: React.FC = () => {
     };
 
     const handleError = (error: any) => {
-      console.error('❌ Erreur Synapse:', error);
+      safeLog.error('Erreur Synapse:', error);
       toast({
         title: "Erreur Synapse",
         description: error.message || "Une erreur est survenue",
@@ -133,7 +144,7 @@ export const SynapseVoiceInterface: React.FC = () => {
     };
 
     const handleStatusChange = (newStatus: string) => {
-      console.log('🔄 Statut Synapse:', newStatus);
+      safeLog.info('Statut Synapse:', newStatus);
       
       if (newStatus === 'connected') {
         toast({
@@ -167,26 +178,26 @@ export const SynapseVoiceInterface: React.FC = () => {
 
   // Gestion de la connexion
   const handleConnect = useCallback(async () => {
-    console.log('🔄 Tentative de connexion...', { status, connect: !!connect });
+    safeLog.info('Tentative de connexion...', { status, connect: !!connect });
     try {
       await refreshContext();
-      console.log('✅ Contexte rafraîchi');
+      safeLog.info('Contexte rafraîchi');
       await connect();
-      console.log('✅ Connect() appelé');
+      safeLog.info('Connect() appelé');
     } catch (error) {
-      console.error('❌ Erreur de connexion:', error);
+      safeLog.error('Erreur de connexion:', error);
     }
   }, [connect, refreshContext]);
 
   const handleDisconnect = useCallback(async () => {
-    console.log('🔄 Tentative de déconnexion...', { status, disconnect: !!disconnect });
+    safeLog.info('Tentative de déconnexion...', { status, disconnect: !!disconnect });
     try {
       await disconnect();
       setMessages([]);
       setToolCalls([]);
-      console.log('✅ Déconnexion réussie');
+      safeLog.info('Déconnexion réussie');
     } catch (error) {
-      console.error('❌ Erreur de déconnexion:', error);
+      safeLog.error('Erreur de déconnexion:', error);
     }
   }, [disconnect]);
 
@@ -195,7 +206,7 @@ export const SynapseVoiceInterface: React.FC = () => {
     try {
       await startAudioStream();
     } catch (error) {
-      console.error('❌ Erreur d\'écoute:', error);
+      safeLog.error('Erreur d\'écoute:', error);
     }
   }, [startAudioStream]);
 
@@ -203,7 +214,7 @@ export const SynapseVoiceInterface: React.FC = () => {
     try {
       await stopAudioStream();
     } catch (error) {
-      console.error('❌ Erreur d\'arrêt:', error);
+      safeLog.error('Erreur d\'arrêt:', error);
     }
   }, [stopAudioStream]);
 
