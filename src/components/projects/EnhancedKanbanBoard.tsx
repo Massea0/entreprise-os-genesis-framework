@@ -105,7 +105,7 @@ const PRIORITY_CONFIG = {
   urgent: { label: 'Urgent', color: 'bg-red-100 text-red-600', icon: '🔥' }
 };
 
-export default function EnhancedKanbanBoard({ 
+function EnhancedKanbanBoard({ 
   tasks, 
   onTaskUpdate, 
   onTaskCreate, 
@@ -486,3 +486,5 @@ export default function EnhancedKanbanBoard({
     </div>
   );
 }
+
+export default EnhancedKanbanBoard;

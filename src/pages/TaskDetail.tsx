@@ -27,6 +27,7 @@ import {
   UserPlus,
   Trash2
 } from 'lucide-react';
+import TaskComments from '@/components/tasks/TaskComments';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
@@ -80,12 +81,10 @@ export default function TaskDetail() {
   const { id, projectId } = useParams<{ id: string; projectId: string }>();
   const navigate = useNavigate();
   const [task, setTask] = useState<Task | null>(null);
-  const [comments, setComments] = useState<TaskComment[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
-  const [newComment, setNewComment] = useState('');
-  const [isSubmittingComment, setIsSubmittingComment] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({
     title: '',
     description: '',
@@ -97,9 +96,16 @@ export default function TaskDetail() {
   const { toast } = useToast();
 
   useEffect(() => {
+    const getCurrentUser = async () => {
+      const { data: userData } = await supabase.auth.getUser();
+      if (userData.user) {
+        setCurrentUserId(userData.user.id);
+      }
+    };
+    getCurrentUser();
+    
     if (id) {
       loadTask();
-      loadComments();
       loadUsers();
     }
   }, [id]);
@@ -139,42 +145,6 @@ export default function TaskDetail() {
       });
     } finally {
       setLoading(false);
-    }
-  };
-
-  const loadComments = async () => {
-    try {
-      const { data: commentsData, error: commentsError } = await supabase
-        .from('task_comments')
-        .select('*')
-        .eq('task_id', id)
-        .order('created_at', { ascending: true });
-
-      if (commentsError) throw commentsError;
-
-      if (!commentsData || commentsData.length === 0) {
-        setComments([]);
-        return;
-      }
-
-      // Get user details for comments
-      const userIds = [...new Set(commentsData.map(c => c.user_id))];
-      const { data: usersData, error: usersError } = await supabase
-        .from('users')
-        .select('id, first_name, last_name')
-        .in('id', userIds);
-
-      if (usersError) throw usersError;
-
-      // Combine comments with user data
-      const commentsWithUsers = commentsData.map(comment => ({
-        ...comment,
-        user: usersData?.find(u => u.id === comment.user_id)
-      }));
-
-      setComments(commentsWithUsers);
-    } catch (error) {
-      console.error('Error loading comments:', error);
     }
   };
 
@@ -223,68 +193,6 @@ export default function TaskDetail() {
         variant: "destructive",
         title: "Erreur",
         description: "Erreur lors de la mise à jour de la tâche"
-      });
-    }
-  };
-
-  const handleAddComment = async () => {
-    if (!newComment.trim()) return;
-
-    try {
-      setIsSubmittingComment(true);
-      
-      // Get current user
-      const { data: userData } = await supabase.auth.getUser();
-      if (!userData.user) throw new Error('User not authenticated');
-
-      const { error } = await supabase
-        .from('task_comments')
-        .insert({
-          task_id: id!,
-          user_id: userData.user.id,
-          content: newComment.trim()
-        });
-
-      if (error) throw error;
-
-      setNewComment('');
-      loadComments();
-      toast({
-        title: "Commentaire ajouté",
-        description: "Votre commentaire a été publié"
-      });
-    } catch (error) {
-      console.error('Error adding comment:', error);
-      toast({
-        variant: "destructive",
-        title: "Erreur",
-        description: "Erreur lors de l'ajout du commentaire"
-      });
-    } finally {
-      setIsSubmittingComment(false);
-    }
-  };
-
-  const handleDeleteComment = async (commentId: string) => {
-    try {
-      const { error } = await supabase
-        .from('task_comments')
-        .delete()
-        .eq('id', commentId);
-
-      if (error) throw error;
-
-      loadComments();
-      toast({
-        title: "Commentaire supprimé",
-        description: "Le commentaire a été supprimé"
-      });
-    } catch (error) {
-      console.error('Error deleting comment:', error);
-      toast({
-        variant: "destructive",
-        title: "Erreur",
-        description: "Erreur lors de la suppression"
       });
     }
   };
@@ -713,77 +621,8 @@ export default function TaskDetail() {
             </CardContent>
           </Card>
 
-          {/* Comments Section */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <MessageSquare className="h-5 w-5" />
-                Commentaires ({comments.length})
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {/* Add Comment */}
-              <div className="flex gap-3">
-                <Textarea
-                  value={newComment}
-                  onChange={(e) => setNewComment(e.target.value)}
-                  placeholder="Ajouter un commentaire..."
-                  className="flex-1"
-                  rows={3}
-                />
-                <Button 
-                  onClick={handleAddComment}
-                  disabled={!newComment.trim() || isSubmittingComment}
-                  size="sm"
-                  className="self-end"
-                >
-                  <Send className="h-4 w-4" />
-                </Button>
-              </div>
-
-              <Separator />
-
-              {/* Comments List */}
-              <div className="space-y-4">
-                {comments.length === 0 ? (
-                  <p className="text-muted-foreground text-center py-4">
-                    Aucun commentaire pour le moment
-                  </p>
-                ) : (
-                  comments.map((comment) => (
-                    <div key={comment.id} className="flex gap-3 p-3 border rounded-lg">
-                      <Avatar className="h-8 w-8">
-                        <AvatarFallback className="text-xs">
-                          {comment.user?.first_name?.[0]}{comment.user?.last_name?.[0]}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between mb-1">
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium text-sm">
-                              {comment.user?.first_name} {comment.user?.last_name}
-                            </span>
-                            <span className="text-xs text-muted-foreground">
-                              {format(new Date(comment.created_at), 'dd MMM yyyy à HH:mm', { locale: fr })}
-                            </span>
-                          </div>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDeleteComment(comment.id)}
-                            className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
-                          >
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
-                        </div>
-                        <p className="text-sm whitespace-pre-wrap">{comment.content}</p>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </CardContent>
-          </Card>
+          {/* Comments Section - Style GitLab */}
+          {currentUserId && <TaskComments taskId={id!} currentUserId={currentUserId} />}
         </div>
       </div>
     </div>

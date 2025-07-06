@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { KanbanBoard } from '@/components/projects/KanbanBoard';
+import EnhancedKanbanBoard from '@/components/projects/EnhancedKanbanBoard';
 import { 
   ArrowLeft, 
   Calendar, 
@@ -355,7 +355,8 @@ export default function ProjectDetail() {
           </Button>
         </div>
         
-        <KanbanBoard
+        <EnhancedKanbanBoard
+          projectId={id!}
           tasks={tasks}
           onTaskUpdate={handleTaskUpdate}
           onTaskCreate={handleTaskCreate}
