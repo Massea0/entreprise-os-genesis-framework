@@ -1,47 +1,57 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { ThemeProvider } from "next-themes";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AppLayout } from "@/components/layout/AppLayout";
+
+// Pages
 import Index from "./pages/Index";
 import Login from "./pages/auth/Login";
 import Register from "./pages/auth/Register";
 import Dashboard from "./pages/Dashboard";
 import WorkDashboard from "./pages/WorkDashboard";
+import Projects from "./pages/Projects";
 import ProjectsList from "./pages/ProjectsList";
 import ProjectDetail from "./pages/ProjectDetail";
 import TaskDetail from "./pages/TaskDetail";
+import Employees from "./pages/hr/Employees";
+import EmployeeDetail from "./pages/hr/EmployeeDetail";
+import Departments from "./pages/hr/Departments";
+import Organization from "./pages/hr/Organization";
 import Quotes from "./pages/business/Quotes";
 import QuoteForm from "./pages/business/QuoteForm";
 import Invoices from "./pages/business/Invoices";
 import Clients from "./pages/business/Clients";
-import HREmployees from "./pages/hr/Employees";
-import HREmployeeDetail from "./pages/hr/EmployeeDetail";
-import HRDepartments from "./pages/hr/Departments";
-import HROrganization from "./pages/hr/Organization";
-import NotFound from "./pages/NotFound";
+import SynapsePage from "./pages/SynapsePage";
 
 const queryClient = new QueryClient();
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-      <AuthProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
+function App() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <AuthProvider>
             <Routes>
               {/* Public routes */}
-              <Route path="/" element={<Index />} />
-              <Route path="/auth/login" element={<Login />} />
-              <Route path="/auth/register" element={<Register />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/register" element={<Register />} />
               
               {/* Protected routes with layout */}
+              <Route path="/" element={
+                <ProtectedRoute>
+                  <AppLayout>
+                    <Index />
+                  </AppLayout>
+                </ProtectedRoute>
+              } />
+              
               <Route path="/dashboard" element={
                 <ProtectedRoute>
                   <AppLayout>
@@ -49,7 +59,7 @@ const App = () => (
                   </AppLayout>
                 </ProtectedRoute>
               } />
-              
+
               <Route path="/work-dashboard" element={
                 <ProtectedRoute>
                   <AppLayout>
@@ -57,15 +67,31 @@ const App = () => (
                   </AppLayout>
                 </ProtectedRoute>
               } />
-              
+
+              <Route path="/synapse" element={
+                <ProtectedRoute>
+                  <AppLayout>
+                    <SynapsePage />
+                  </AppLayout>
+                </ProtectedRoute>
+              } />
+
               <Route path="/projects" element={
+                <ProtectedRoute>
+                  <AppLayout>
+                    <Projects />
+                  </AppLayout>
+                </ProtectedRoute>
+              } />
+
+              <Route path="/projects/list" element={
                 <ProtectedRoute>
                   <AppLayout>
                     <ProjectsList />
                   </AppLayout>
                 </ProtectedRoute>
               } />
-              
+
               <Route path="/projects/:id" element={
                 <ProtectedRoute>
                   <AppLayout>
@@ -73,60 +99,49 @@ const App = () => (
                   </AppLayout>
                 </ProtectedRoute>
               } />
-              
-              <Route path="/projects/:projectId/tasks/:id" element={
+
+              <Route path="/tasks/:id" element={
                 <ProtectedRoute>
                   <AppLayout>
                     <TaskDetail />
                   </AppLayout>
                 </ProtectedRoute>
               } />
-              
-              {/* HR Module Routes */}
+
+              {/* HR Routes */}
               <Route path="/hr/employees" element={
-                <ProtectedRoute requiredRole="hr_manager">
+                <ProtectedRoute>
                   <AppLayout>
-                    <HREmployees />
+                    <Employees />
                   </AppLayout>
                 </ProtectedRoute>
               } />
-              
+
               <Route path="/hr/employees/:id" element={
-                <ProtectedRoute requiredRole="hr_manager">
+                <ProtectedRoute>
                   <AppLayout>
-                    <HREmployeeDetail />
+                    <EmployeeDetail />
                   </AppLayout>
                 </ProtectedRoute>
               } />
-              
+
               <Route path="/hr/departments" element={
-                <ProtectedRoute requiredRole="hr_manager">
+                <ProtectedRoute>
                   <AppLayout>
-                    <HRDepartments />
+                    <Departments />
                   </AppLayout>
                 </ProtectedRoute>
               } />
-              
+
               <Route path="/hr/organization" element={
-                <ProtectedRoute requiredRole="hr_manager">
+                <ProtectedRoute>
                   <AppLayout>
-                    <HROrganization />
+                    <Organization />
                   </AppLayout>
                 </ProtectedRoute>
               } />
-              
-              <Route path="/hr/*" element={
-                <ProtectedRoute requiredRole="hr_manager">
-                  <AppLayout>
-                    <div className="p-8 text-center">
-                      <h2 className="text-2xl font-bold mb-4">Module RH</h2>
-                      <p className="text-muted-foreground">Sélectionnez une section dans le menu</p>
-                    </div>
-                  </AppLayout>
-                </ProtectedRoute>
-              } />
-              
-              {/* Business Module Routes */}
+
+              {/* Business Routes */}
               <Route path="/business/quotes" element={
                 <ProtectedRoute>
                   <AppLayout>
@@ -134,7 +149,7 @@ const App = () => (
                   </AppLayout>
                 </ProtectedRoute>
               } />
-              
+
               <Route path="/business/quotes/new" element={
                 <ProtectedRoute>
                   <AppLayout>
@@ -142,15 +157,7 @@ const App = () => (
                   </AppLayout>
                 </ProtectedRoute>
               } />
-              
-              <Route path="/business/quotes/:id/edit" element={
-                <ProtectedRoute>
-                  <AppLayout>
-                    <QuoteForm />
-                  </AppLayout>
-                </ProtectedRoute>
-              } />
-              
+
               <Route path="/business/invoices" element={
                 <ProtectedRoute>
                   <AppLayout>
@@ -158,7 +165,7 @@ const App = () => (
                   </AppLayout>
                 </ProtectedRoute>
               } />
-              
+
               <Route path="/business/clients" element={
                 <ProtectedRoute>
                   <AppLayout>
@@ -166,51 +173,15 @@ const App = () => (
                   </AppLayout>
                 </ProtectedRoute>
               } />
-              
-              <Route path="/business/*" element={
-                <ProtectedRoute>
-                  <AppLayout>
-                    <div className="p-8 text-center">
-                      <h2 className="text-2xl font-bold mb-4">Module Business</h2>
-                      <p className="text-muted-foreground">Module en cours de développement</p>
-                    </div>
-                  </AppLayout>
-                </ProtectedRoute>
-              } />
-              
-              <Route path="/support/*" element={
-                <ProtectedRoute>
-                  <AppLayout>
-                    <div className="p-8 text-center">
-                      <h2 className="text-2xl font-bold mb-4">Module Support</h2>
-                      <p className="text-muted-foreground">Module en cours de développement</p>
-                    </div>
-                  </AppLayout>
-                </ProtectedRoute>
-              } />
-              
-              <Route path="/settings" element={
-                <ProtectedRoute>
-                  <AppLayout>
-                    <div className="p-8 text-center">
-                      <h2 className="text-2xl font-bold mb-4">Paramètres</h2>
-                      <p className="text-muted-foreground">Configuration en cours de développement</p>
-                    </div>
-                  </AppLayout>
-                </ProtectedRoute>
-              } />
-              
-              {/* Redirect to dashboard for authenticated users */}
-              <Route path="/app" element={<Navigate to="/dashboard" replace />} />
-              
-              {/* Catch all */}
-              <Route path="*" element={<NotFound />} />
+
+              {/* Redirect root to dashboard */}
+              <Route path="/" element={<Navigate to="/dashboard" replace />} />
             </Routes>
-          </BrowserRouter>
-        </TooltipProvider>
-      </AuthProvider>
-    </ThemeProvider>
-  </QueryClientProvider>
-);
+          </AuthProvider>
+        </BrowserRouter>
+      </TooltipProvider>
+    </QueryClientProvider>
+  );
+}
 
 export default App;

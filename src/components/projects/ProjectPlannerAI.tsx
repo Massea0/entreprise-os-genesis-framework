@@ -106,14 +106,14 @@ export const ProjectPlannerAI: React.FC<ProjectPlannerProps> = ({
         
         toast({
           title: "🤖 Plan généré avec succès",
-          description: "L'IA a analysé votre projet et créé un plan détaillé automatiquement"
+          description: "Synapse a analysé votre projet et créé un plan détaillé automatiquement"
         });
       }
     } catch (error) {
       console.error('Erreur génération IA:', error);
       toast({
         variant: "destructive",
-        title: "Erreur IA",
+        title: "Erreur Synapse",
         description: "Impossible de générer le plan automatiquement"
       });
     } finally {
@@ -125,12 +125,12 @@ export const ProjectPlannerAI: React.FC<ProjectPlannerProps> = ({
     if (!generatedPlan) return;
 
     try {
-      // Créer le projet avec les données dans custom_fields
-      const customFields = {
+      // Créer le projet avec les données dans custom_fields - conversion JSON explicite
+      const customFields = JSON.parse(JSON.stringify({
         aiGenerated: true,
         aiPlan: generatedPlan,
         priority: projectData.priority
-      };
+      }));
 
       const { data: project, error: projectError } = await supabase
         .from('projects')
@@ -159,13 +159,13 @@ export const ProjectPlannerAI: React.FC<ProjectPlannerProps> = ({
           priority: task.priority,
           status: 'todo',
           assignee_id: task.assignedEmployee || null,
-          custom_fields: {
+          custom_fields: JSON.parse(JSON.stringify({
             phase: phase.name,
             phaseIndex,
             taskIndex,
             requiredSkills: task.requiredSkills,
             aiGenerated: true
-          },
+          })),
           position: phaseIndex * 1000 + taskIndex
         }))
       );
@@ -178,7 +178,7 @@ export const ProjectPlannerAI: React.FC<ProjectPlannerProps> = ({
 
       toast({
         title: "🎉 Projet créé avec succès !",
-        description: `${tasksToCreate.length} tâches générées automatiquement par l'IA`
+        description: `${tasksToCreate.length} tâches générées automatiquement par Synapse`
       });
 
       onProjectCreated(project);
@@ -209,9 +209,9 @@ export const ProjectPlannerAI: React.FC<ProjectPlannerProps> = ({
                 <Bot className="h-6 w-6 text-primary" />
               </div>
               <div>
-                <h2 className="text-2xl font-bold">🤖 Planificateur IA Avancé</h2>
+                <h2 className="text-2xl font-bold">🧠 Synapse - Planificateur IA</h2>
                 <p className="text-muted-foreground">
-                  L'IA analyse votre équipe et génère automatiquement tout le plan projet
+                  Synapse analyse votre équipe et génère automatiquement tout le plan projet
                 </p>
               </div>
             </div>
@@ -272,7 +272,7 @@ export const ProjectPlannerAI: React.FC<ProjectPlannerProps> = ({
                 id="description"
                 value={projectData.description}
                 onChange={(e) => setProjectData({ ...projectData, description: e.target.value })}
-                placeholder="Décrivez brièvement le projet... (l'IA s'occupera du reste)"
+                placeholder="Décrivez brièvement le projet... (Synapse s'occupera du reste)"
                 rows={3}
               />
             </div>
@@ -298,10 +298,10 @@ export const ProjectPlannerAI: React.FC<ProjectPlannerProps> = ({
             <div className="bg-blue-50 p-4 rounded-lg">
               <h4 className="font-semibold text-blue-900 mb-2 flex items-center gap-2">
                 <Sparkles className="h-4 w-4" />
-                Magie de l'IA
+                Magie de Synapse
               </h4>
               <p className="text-blue-800 text-sm">
-                Une fois ces informations saisies, l'IA va automatiquement :
+                Une fois ces informations saisies, Synapse va automatiquement :
               </p>
               <ul className="list-disc list-inside text-blue-700 text-sm mt-2 space-y-1">
                 <li>Analyser les compétences de votre équipe</li>
@@ -321,12 +321,12 @@ export const ProjectPlannerAI: React.FC<ProjectPlannerProps> = ({
               {isGenerating ? (
                 <>
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
-                  IA en cours de génération...
+                  Synapse en cours de génération...
                 </>
               ) : (
                 <>
                   <Bot className="h-4 w-4 mr-2" />
-                  🚀 Générer le plan complet avec l'IA
+                  🚀 Générer le plan complet avec Synapse
                 </>
               )}
             </Button>
@@ -342,7 +342,7 @@ export const ProjectPlannerAI: React.FC<ProjectPlannerProps> = ({
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <CheckCircle className="h-5 w-5 text-green-600" />
-                Plan Généré par l'IA
+                Plan Généré par Synapse
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -411,7 +411,7 @@ export const ProjectPlannerAI: React.FC<ProjectPlannerProps> = ({
                   <CardContent className="p-4">
                     <h4 className="font-semibold mb-3 flex items-center gap-2">
                       <AlertTriangle className="h-4 w-4 text-orange-600" />
-                      Risques identifiés par l'IA
+                      Risques identifiés par Synapse
                     </h4>
                     <ul className="space-y-1">
                       {generatedPlan.riskAssessment.map((risk, index) => (

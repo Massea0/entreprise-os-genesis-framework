@@ -1,3 +1,4 @@
+
 import { 
   Building2, 
   Users, 
@@ -5,7 +6,8 @@ import {
   MessageSquare, 
   BarChart3, 
   Settings,
-  Home
+  Home,
+  Mic
 } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
 import {
@@ -35,6 +37,13 @@ const menuItems = [
     url: "/work-dashboard",
     icon: BarChart3,
     roles: ['admin', 'hr_manager'],
+  },
+  {
+    title: "🧠 Synapse Live",
+    url: "/synapse",
+    icon: Mic,
+    roles: ['admin', 'hr_manager', 'client'],
+    description: "Assistant vocal IA"
   },
   {
     title: "Projets",
@@ -142,6 +151,7 @@ export function AppSidebar() {
                       <NavLink 
                         to={item.url} 
                         className={getNavClass(isActive(item.url))}
+                        title={item.description}
                       >
                         <item.icon className="h-4 w-4" />
                         {!collapsed && <span>{item.title}</span>}
