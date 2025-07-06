@@ -29,44 +29,57 @@ serve(async (req) => {
       .from('tasks')
       .select(`
         *,
-        projects(name, description, start_date, end_date),
-        users:assignee_id(first_name, last_name),
-        assignee:employees!tasks_assignee_id_fkey(first_name, last_name, skills, performance_score)
+        projects(name, description, start_date, end_date)
       `)
       .eq('id', taskId)
       .single();
 
+    // Récupérer l'assigné depuis la table employees si assignee_id existe
+    let assigneeData = null;
+    if (task && task.assignee_id) {
+      const { data: employee } = await supabase
+        .from('employees')
+        .select('first_name, last_name, skills, performance_score')
+        .eq('user_id', task.assignee_id)
+        .maybeSingle();
+      
+      assigneeData = employee;
+    }
+
     if (taskError) throw taskError;
+    
+    // Ajouter l'assigné aux données de la tâche
+    const taskWithAssignee = { ...task, assignee: assigneeData };
 
     // Récupérer les tâches liées du même projet pour le contexte
     const { data: relatedTasks } = await supabase
       .from('tasks')
       .select('title, status, estimated_hours, due_date, priority')
-      .eq('project_id', task.project_id)
+      .eq('project_id', taskWithAssignee.project_id)
       .neq('id', taskId)
       .limit(10);
 
     let mermaidDiagram;
     switch (diagramType) {
       case 'gantt':
-        mermaidDiagram = await generateGanttDiagram(task, relatedTasks);
+        mermaidDiagram = await generateGanttDiagram(taskWithAssignee, relatedTasks);
         break;
       case 'flowchart':
-        mermaidDiagram = await generateFlowchartDiagram(task);
+        mermaidDiagram = await generateFlowchartDiagram(taskWithAssignee);
         break;
       case 'mindmap':
-        mermaidDiagram = await generateMindmapDiagram(task);
+        mermaidDiagram = await generateMindmapDiagram(taskWithAssignee);
         break;
       case 'timeline':
-        mermaidDiagram = await generateTimelineDiagram(task, relatedTasks);
+        mermaidDiagram = await generateTimelineDiagram(taskWithAssignee, relatedTasks);
         break;
       default:
-        mermaidDiagram = await generateGanttDiagram(task, relatedTasks);
+        mermaidDiagram = await generateGanttDiagram(taskWithAssignee, relatedTasks);
     }
 
     return new Response(JSON.stringify({ 
       mermaidCode: mermaidDiagram,
-      taskTitle: task.title,
+      taskTitle: taskWithAssignee.title,
       diagramType 
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
